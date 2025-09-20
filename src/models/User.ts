@@ -1,7 +1,6 @@
 export enum UserRole {
-  PATIENT = 'patient',
-  DOCTOR = 'doctor',
-  PHARMACIST = 'pharmacist',
+  BUYER = 'customer',
+  VENDOR = 'vendor',
   ADMIN = 'admin'
 }
 
@@ -19,22 +18,12 @@ export interface User {
   password: string;
   role: UserRole;
   status: UserStatus;
-  dateOfBirth?: Date;
   phoneNumber?: string;
   address?: string;
   city?: string;
   state?: string;
   zipCode?: string;
   country?: string;
-  medicalLicenseNumber?: string; // For doctors/pharmacists
-  specialization?: string; // For doctors
-  pharmacyName?: string; // For pharmacists
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  insuranceProvider?: string;
-  insurancePolicyNumber?: string;
-  allergies?: string;
-  medicalConditions?: string;
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
@@ -55,15 +44,6 @@ export class UserModel implements User {
   state?: string;
   zipCode?: string;
   country?: string;
-  medicalLicenseNumber?: string;
-  specialization?: string;
-  pharmacyName?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  insuranceProvider?: string;
-  insurancePolicyNumber?: string;
-  allergies?: string;
-  medicalConditions?: string;
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
@@ -74,7 +54,7 @@ export class UserModel implements User {
     lastName: string,
     email: string,
     password: string,
-    role: UserRole = UserRole.PATIENT,
+    role: UserRole = UserRole.BUYER,
     status: UserStatus = UserStatus.ACTIVE,
     dateOfBirth?: Date,
     phoneNumber?: string,
@@ -83,15 +63,6 @@ export class UserModel implements User {
     state?: string,
     zipCode?: string,
     country?: string,
-    medicalLicenseNumber?: string,
-    specialization?: string,
-    pharmacyName?: string,
-    emergencyContactName?: string,
-    emergencyContactPhone?: string,
-    insuranceProvider?: string,
-    insurancePolicyNumber?: string,
-    allergies?: string,
-    medicalConditions?: string,
     createdAt?: Date,
     updatedAt?: Date,
     lastLoginAt?: Date
@@ -110,15 +81,6 @@ export class UserModel implements User {
     this.state = state;
     this.zipCode = zipCode;
     this.country = country;
-    this.medicalLicenseNumber = medicalLicenseNumber;
-    this.specialization = specialization;
-    this.pharmacyName = pharmacyName;
-    this.emergencyContactName = emergencyContactName;
-    this.emergencyContactPhone = emergencyContactPhone;
-    this.insuranceProvider = insuranceProvider;
-    this.insurancePolicyNumber = insurancePolicyNumber;
-    this.allergies = allergies;
-    this.medicalConditions = medicalConditions;
     this.createdAt = createdAt || new Date();
     this.updatedAt = updatedAt || new Date();
     this.lastLoginAt = lastLoginAt;
@@ -129,15 +91,6 @@ export class UserModel implements User {
     return `${this.firstName} ${this.lastName}`;
   }
 
-  // Check if user is a healthcare professional
-  isHealthcareProfessional(): boolean {
-    return this.role === UserRole.DOCTOR || this.role === UserRole.PHARMACIST;
-  }
-
-  // Check if user is an admin
-  isAdmin(): boolean {
-    return this.role === UserRole.ADMIN;
-  }
 
   // Check if user is active
   isActive(): boolean {

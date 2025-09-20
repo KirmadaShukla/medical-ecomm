@@ -2,9 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import userRoutes from './routes/userRoutes';
+import adminRoutes from './routes/adminRoutes';
+import vendorRoutes from './routes/vendorRoutes';
+import productRoutes from './routes/productRoutes';
+import { connectDB } from './config/database';
 
 // Load environment variables
 dotenv.config();
+
+// Connect to database
+connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +22,9 @@ app.use(express.json());
 
 // Routes
 app.use('/api', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/vendor', vendorRoutes);
+app.use('/api', productRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
@@ -29,6 +39,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
+    database: 'Connected'
   });
 });
 
