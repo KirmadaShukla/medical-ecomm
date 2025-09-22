@@ -1,5 +1,9 @@
 import { Router } from 'express';
 import { 
+  // Auth routes
+  vendorLogin,
+  sendVendorToken,
+  // Product routes
   addNewProduct, 
   addExistingProduct, 
   getVendorProducts, 
@@ -9,6 +13,12 @@ import {
 import { isAuthenticated, isVendor } from '../middleware/auth';
 
 const router = Router();
+
+// Public vendor routes
+router.post('/login', vendorLogin);
+
+// Protected vendor routes
+router.get('/token', isAuthenticated, isVendor, sendVendorToken);
 
 // Apply authentication middleware to all vendor routes
 router.use(isAuthenticated, isVendor);

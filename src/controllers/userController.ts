@@ -1,26 +1,24 @@
-import { Request, Response } from 'express';
-import { User, UserModel, UserRole, UserStatus } from '../models/User';
+import { Request, Response, NextFunction } from 'express';
+import User, { IUser, UserRole, UserStatus } from '../models/User';
+import { generateToken, generateAdminToken, generateVendorToken, generateUserToken } from '../utils/tokenUtils';
+import { catchAsyncError, AppError } from '../utils/errorHandler';
 
-// Mock data store
-let users: User[] = [];
-let nextId = 1;
-
-export const getUsers = (req: Request, res: Response): void => {
+export const getUsers = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const users = await User.find();
   res.status(200).json(users);
-};
+});
 
-export const getUserById = (req: Request, res: Response): void => {
-  const id = parseInt(req.params.id, 10);
-  const user = users.find(u => u.id === id);
+export const getUserById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const user = await User.findById(req.params.id);
   
-  if (user) {
-    res.status(200).json(user);
-  } else {
-    res.status(404).json({ message: 'User not found' });
+  if (!user) {
+    return next(new AppError('User not found', 404));
   }
-};
+  
+  res.status(200).json(user);
+});
 
-export const createUser = (req: Request, res: Response): void => {
+export const createUser = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const {
     firstName,
     lastName,
@@ -28,6 +26,7 @@ export const createUser = (req: Request, res: Response): void => {
     password,
     role,
     status,
+    dateOfBirth,
     phoneNumber,
     address,
     city,
@@ -38,45 +37,53 @@ export const createUser = (req: Request, res: Response): void => {
   
   // Basic validation
   if (!firstName || !lastName || !email || !password) {
-    res.status(400).json({ message: 'Missing required fields: firstName, lastName, email, password' });
-    return;
+    return next(new AppError('Missing required fields: firstName, lastName, email, password', 400));
   }
   
   // Check if user with this email already exists
-  const existingUser = users.find(u => u.email === email);
+  const existingUser = await User.findOne({ email });
   if (existingUser) {
-    res.status(409).json({ message: 'User with this email already exists' });
-    return;
+    return next(new AppError('User with this email already exists', 409));
   }
   
-  const newUser: User = new UserModel(
+  const user = new User({
     firstName,
     lastName,
     email,
     password,
-    role || UserRole.BUYER,
-    status || UserStatus.ACTIVE,
+    role: role || UserRole.BUYER,
+    status: status || UserStatus.ACTIVE,
+    dateOfBirth,
     phoneNumber,
     address,
     city,
     state,
     zipCode,
     country,
-  );
+  });
   
-  users.push(newUser);
-  res.status(201).json(newUser);
-};
-
-export const updateUser = (req: Request, res: Response): void => {
-  const id = parseInt(req.params.id, 10);
-  const userIndex = users.findIndex(u => u.id === id);
+  await user.save();
   
-  if (userIndex === -1) {
-    res.status(404).json({ message: 'User not found' });
-    return;
+  // Generate user token (only for customers)
+  let token: string;
+  try {
+    token = generateUserToken(user);
+  } catch (error) {
+    return next(new AppError('Error generating token', 500));
   }
   
+  // Remove password from output
+  const userObj = user.toObject();
+  // @ts-ignore
+  delete userObj.password;
+  
+  res.status(201).json({
+    user: userObj,
+    token
+  });
+});
+
+export const updateUser = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const {
     firstName,
     lastName,
@@ -84,6 +91,7 @@ export const updateUser = (req: Request, res: Response): void => {
     password,
     role,
     status,
+    dateOfBirth,
     phoneNumber,
     address,
     city,
@@ -92,64 +100,134 @@ export const updateUser = (req: Request, res: Response): void => {
     country,
   } = req.body;
   
+  const user = await User.findById(req.params.id);
+  
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+  
   // Check if another user already has this email
-  if (email && email !== users[userIndex].email) {
-    const existingUser = users.find(u => u.email === email && u.id !== id);
+  if (email && email !== user.email) {
+    const existingUser = await User.findOne({ email, _id: { $ne: user._id } });
     if (existingUser) {
-      res.status(409).json({ message: 'User with this email already exists' });
-      return;
+      return next(new AppError('User with this email already exists', 409));
     }
   }
   
-  users[userIndex] = {
-    ...users[userIndex],
-    firstName: firstName || users[userIndex].firstName,
-    lastName: lastName || users[userIndex].lastName,
-    email: email || users[userIndex].email,
-    password: password || users[userIndex].password,
-    role: role || users[userIndex].role,
-    status: status || users[userIndex].status,
-    phoneNumber: phoneNumber || users[userIndex].phoneNumber,
-    address: address || users[userIndex].address,
-    city: city || users[userIndex].city,
-    state: state || users[userIndex].state,
-    zipCode: zipCode || users[userIndex].zipCode,
-    country: country || users[userIndex].country,
-    updatedAt: new Date()
-  };
+  // Update user fields
+  user.firstName = firstName || user.firstName;
+  user.lastName = lastName || user.lastName;
+  user.email = email || user.email;
+  if (password) user.password = password;
+  user.role = role || user.role;
+  user.status = status || user.status;
+  user.dateOfBirth = dateOfBirth || user.dateOfBirth;
+  user.phoneNumber = phoneNumber || user.phoneNumber;
+  user.address = address || user.address;
+  user.city = city || user.city;
+  user.state = state || user.state;
+  user.zipCode = zipCode || user.zipCode;
+  user.country = country || user.country;
   
-  res.status(200).json(users[userIndex]);
-};
+  await user.save();
+  
+  // Remove password from output
+  const userObj = user.toObject();
+  // @ts-ignore
+  delete userObj.password;
+  
+  res.status(200).json(userObj);
+});
 
-export const deleteUser = (req: Request, res: Response): void => {
-  const id = parseInt(req.params.id, 10);
-  const userIndex = users.findIndex(u => u.id === id);
+export const deleteUser = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const user = await User.findByIdAndDelete(req.params.id);
   
-  if (userIndex === -1) {
-    res.status(404).json({ message: 'User not found' });
-    return;
+  if (!user) {
+    return next(new AppError('User not found', 404));
   }
   
-  users.splice(userIndex, 1);
   res.status(204).send();
-};
+});
 
 // Get users by role
-export const getUsersByRole = (req: Request, res: Response): void => {
+export const getUsersByRole = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const role = req.params.role as UserRole;
   
   // Validate role
   if (!Object.values(UserRole).includes(role)) {
-    res.status(400).json({ message: 'Invalid user role' });
-    return;
+    return next(new AppError('Invalid user role', 400));
   }
   
-  const filteredUsers = users.filter(u => u.role === role);
-  res.status(200).json(filteredUsers);
-};
+  const users = await User.find({ role });
+  res.status(200).json(users);
+});
 
 // Get active users
-export const getActiveUsers = (req: Request, res: Response): void => {
-  const activeUsers = users.filter(u => u.status === UserStatus.ACTIVE);
-  res.status(200).json(activeUsers);
-};
+export const getActiveUsers = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const users = await User.find({ status: UserStatus.ACTIVE });
+  res.status(200).json(users);
+});
+
+// Login user
+export const loginUser = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { email, password } = req.body;
+  
+  // Basic validation
+  if (!email || !password) {
+    return next(new AppError('Please provide email and password', 400));
+  }
+  
+  // Find user by email and select password
+  const user = await User.findOne({ email }).select('+password');
+  
+  if (!user) {
+    return next(new AppError('Invalid email or password', 401));
+  }
+  
+  // Check password
+  const isPasswordCorrect = await user.comparePassword(password);
+  
+  if (!isPasswordCorrect) {
+    return next(new AppError('Invalid email or password', 401));
+  }
+  
+  // Update last login
+  await user.updateLastLogin();
+  
+  // Generate user token (only for customers)
+  let token: string;
+  try {
+    token = generateUserToken(user);
+  } catch (error) {
+    return next(new AppError('Error generating token', 500));
+  }
+  
+  // Remove password from output
+  const userObj = user.toObject();
+  // @ts-ignore
+  delete userObj.password;
+  
+  res.status(200).json({
+    user: userObj,
+    token
+  });
+});
+
+// Send token based on user role
+export const sendToken = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  if (!req.user) {
+    return next(new AppError('User not authenticated', 401));
+  }
+  
+  // Generate user token (only for customers)
+  let token: string;
+  try {
+    token = generateUserToken(req.user);
+  } catch (error) {
+    return next(new AppError('Error generating token', 500));
+  }
+  
+  res.status(200).json({
+    token
+  });
+});

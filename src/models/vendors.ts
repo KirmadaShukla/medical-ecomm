@@ -1,12 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 export interface IVendor extends Document {
-  userId: mongoose.Types.ObjectId; // Reference to the User document
   businessName: string;
   businessLicense: string;
   businessAddress: string;
   businessPhone: string;
   businessEmail: string;
+  password: string; // Vendor's own password
+  role: string; // Add role field
   taxId?: string;
   bankAccount?: {
     accountNumber: string;
@@ -18,17 +20,12 @@ export interface IVendor extends Document {
   rating?: number;
   totalSales?: number;
   totalProducts?: number;
+  comparePassword: (candidatePassword: string) => Promise<boolean>;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const VendorSchema: Schema = new Schema({
-  userId: { 
-    type: Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true,
-    unique: true 
-  },
   businessName: { 
     type: String, 
     required: true,
@@ -49,8 +46,18 @@ const VendorSchema: Schema = new Schema({
   businessEmail: { 
     type: String, 
     required: true,
+    unique: true, // Make email unique
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+  },
+  password: { 
+    type: String, 
+    required: true,
+    minlength: 6
+  },
+  role: { 
+    type: String, 
+    default: 'vendor' // Set default role
   },
   taxId: { 
     type: String 
@@ -88,9 +95,28 @@ const VendorSchema: Schema = new Schema({
   timestamps: true
 });
 
+// Hash password before saving
+VendorSchema.pre<IVendor>('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// Compare password method
+VendorSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
 // Index for better query performance
 VendorSchema.index({ businessName: 1 });
 VendorSchema.index({ status: 1 });
 VendorSchema.index({ rating: -1 });
+VendorSchema.index({ businessEmail: 1 }); // Add index for email
 
 export default mongoose.model<IVendor>('Vendor', VendorSchema);

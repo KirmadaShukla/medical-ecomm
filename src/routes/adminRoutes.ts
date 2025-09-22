@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import {
+  // Auth routes
+  adminLogin,
+  sendAdminToken,
   // Category routes
   getCategories,
   getCategoryById,
@@ -25,6 +28,12 @@ import {
 import { isAuthenticated, isAdmin } from '../middleware/auth';
 
 const router = Router();
+
+// Public admin routes
+router.post('/login', adminLogin);
+
+// Protected admin routes
+router.get('/token', isAuthenticated, isAdmin, sendAdminToken);
 
 // Category routes
 router.get('/categories', isAuthenticated, isAdmin, getCategories);

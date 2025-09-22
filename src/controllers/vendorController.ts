@@ -2,6 +2,157 @@ import { Request, Response } from 'express';
 import Product from '../models/product';
 import VendorProduct from '../models/vendorProduct';
 import Category from '../models/category';
+import User from '../models/User';
+import Vendor from '../models/vendors';
+import { generateVendorToken } from '../utils/tokenUtils';
+
+// ==================== VENDOR REGISTRATION ====================
+
+// Register a new vendor
+export const registerVendor = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      businessName,
+      businessLicense,
+      businessAddress,
+      businessPhone,
+      taxId,
+      bankAccount
+    } = req.body;
+    
+    // Basic validation
+    if (!firstName || !lastName || !email || !password || !businessName || 
+        !businessLicense || !businessAddress || !businessPhone) {
+      res.status(400).json({ 
+        message: 'Missing required fields: firstName, lastName, email, password, businessName, businessLicense, businessAddress, businessPhone' 
+      });
+      return;
+    }
+    
+    // Check if user with this email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      res.status(409).json({ message: 'User with this email already exists' });
+      return;
+    }
+    
+  
+    
+    await user.save();
+    
+    // Create vendor profile
+    const vendor = new Vendor({
+      userId: user._id,
+      businessName,
+      businessLicense,
+      businessAddress,
+      businessPhone,
+      businessEmail: email,
+      taxId,
+      bankAccount,
+      status: 'pending' // Default to pending for approval
+    });
+    
+    await vendor.save();
+    
+    // Generate vendor token
+    const token = generateVendorToken(user);
+    
+    // Remove password from output
+    const userObj = user.toObject();
+    // @ts-ignore
+    delete userObj.password;
+    
+    res.status(201).json({
+      message: 'Vendor registered successfully. Awaiting admin approval.',
+      user: userObj,
+      vendor,
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error registering vendor', error });
+  }
+};
+
+// ==================== AUTHENTICATION ====================
+
+// Vendor login
+export const vendorLogin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+    
+    // Basic validation
+    if (!email || !password) {
+      res.status(400).json({ message: 'Please provide email and password' });
+      return;
+    }
+    
+    // Find vendor user by email and select password
+    const user = await User.findOne({ email, role: 'vendor' }).select('+password');
+    
+    if (!user) {
+      res.status(401).json({ message: 'Invalid email or password' });
+      return;
+    }
+    
+    // Check password
+    const isPasswordCorrect = await user.comparePassword(password);
+    
+    if (!isPasswordCorrect) {
+      res.status(401).json({ message: 'Invalid email or password' });
+      return;
+    }
+    
+    // Update last login
+    await user.updateLastLogin();
+    
+    // Generate vendor token
+    const token = generateVendorToken(user);
+    
+    // Remove password from output
+    const userObj = user.toObject();
+    // @ts-ignore
+    delete userObj.password;
+    
+    res.status(200).json({
+      user: userObj,
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error during vendor login', error });
+  }
+};
+
+// Send vendor token
+export const sendVendorToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
+    }
+    
+    // Check if user is vendor
+    if (req.user.role !== 'vendor') {
+      res.status(403).json({ message: 'Access denied. Vendors only.' });
+      return;
+    }
+    
+    // Generate vendor token
+    const token = generateVendorToken(req.user);
+    
+    res.status(200).json({
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error generating vendor token', error });
+  }
+};
+
+// ==================== PRODUCTS ====================
 
 // Add new product (create new product and vendor product)
 export const addNewProduct = async (req: Request, res: Response): Promise<void> => {

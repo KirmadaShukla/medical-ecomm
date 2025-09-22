@@ -6,6 +6,7 @@ import adminRoutes from './routes/adminRoutes';
 import vendorRoutes from './routes/vendorRoutes';
 import productRoutes from './routes/productRoutes';
 import { connectDB } from './config/database';
+import { globalErrorHandler } from './middleware/error';
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +43,9 @@ app.get('/health', (req, res) => {
     database: 'Connected'
   });
 });
+
+// Global error handler
+app.use(globalErrorHandler);
 
 // Start server
 app.listen(PORT, () => {

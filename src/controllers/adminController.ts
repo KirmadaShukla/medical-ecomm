@@ -3,6 +3,84 @@ import Category from '../models/category';
 import Brand from '../models/brand';
 import Product from '../models/product';
 import VendorProduct from '../models/vendorProduct';
+import Vendor from '../models/vendors';
+import User from '../models/User';
+import { generateAdminToken } from '../utils/tokenUtils';
+import { AppError } from '../utils/errorHandler';
+
+// ==================== AUTHENTICATION ====================
+
+// Admin login
+export const adminLogin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+    
+    // Basic validation
+    if (!email || !password) {
+      res.status(400).json({ message: 'Please provide email and password' });
+      return;
+    }
+    
+    // Find admin user by email and select password
+    const user = await User.findOne({ email, role: 'admin' }).select('+password');
+    
+    if (!user) {
+      res.status(401).json({ message: 'Invalid email or password' });
+      return;
+    }
+    
+    // Check password
+    const isPasswordCorrect = await user.comparePassword(password);
+    
+    if (!isPasswordCorrect) {
+      res.status(401).json({ message: 'Invalid email or password' });
+      return;
+    }
+    
+    // Update last login
+    await user.updateLastLogin();
+    
+    // Generate admin token
+    const token = generateAdminToken(user);
+    
+    // Remove password from output
+    const userObj = user.toObject();
+    // @ts-ignore
+    delete userObj.password;
+    
+    res.status(200).json({
+      user: userObj,
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error during admin login', error });
+  }
+};
+
+// Send admin token
+export const sendAdminToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
+    }
+    
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      res.status(403).json({ message: 'Access denied. Admins only.' });
+      return;
+    }
+    
+    // Generate admin token
+    const token = generateAdminToken(req.user);
+    
+    res.status(200).json({
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error generating admin token', error });
+  }
+};
 
 // ==================== CATEGORY CRUD ====================
 
@@ -334,6 +412,64 @@ export const deleteProduct = async (req: Request, res: Response): Promise<void> 
     res.status(200).json({ message: 'Product and associated vendor products deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting product', error });
+  }
+};
+
+// ==================== VENDOR MANAGEMENT ====================
+
+// Get all vendors
+export const getVendors = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const vendors = await Vendor.find().populate('userId', 'firstName lastName email');
+    res.status(200).json(vendors);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching vendors', error });
+  }
+};
+
+// Get vendor by ID
+export const getVendorById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const vendor = await Vendor.findById(req.params.id).populate('userId', 'firstName lastName email');
+    if (!vendor) {
+      res.status(404).json({ message: 'Vendor not found' });
+      return;
+    }
+    res.status(200).json(vendor);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching vendor', error });
+  }
+};
+
+// Update vendor status (approve/reject/suspend)
+export const updateVendorStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { status } = req.body;
+    
+    // Validate status
+    const validStatuses = ['pending', 'approved', 'rejected', 'suspended'];
+    if (!validStatuses.includes(status)) {
+      res.status(400).json({ message: 'Invalid status. Must be one of: pending, approved, rejected, suspended' });
+      return;
+    }
+    
+    const vendor = await Vendor.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    ).populate('userId', 'firstName lastName email');
+    
+    if (!vendor) {
+      res.status(404).json({ message: 'Vendor not found' });
+      return;
+    }
+    
+    res.status(200).json({ 
+      message: `Vendor ${status} successfully`, 
+      vendor 
+    });
+  } catch (error) {
+    res.status(400).json({ message: 'Error updating vendor status', error });
   }
 };
 

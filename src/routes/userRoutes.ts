@@ -6,7 +6,9 @@ import {
   updateUser,
   deleteUser,
   getUsersByRole,
-  getActiveUsers
+  getActiveUsers,
+  loginUser,
+  sendToken
 } from '../controllers/userController';
 import { isAuthenticated, isAdmin, isUser } from '../middleware/auth';
 
@@ -14,12 +16,14 @@ const router = Router();
 
 // Public routes
 router.post('/users', createUser);
+router.post('/users/login', loginUser);
 
-// Protected routes
+// Protected routes - User specific
 router.get('/users/profile', isAuthenticated, isUser, getUserById);
 router.put('/users/profile', isAuthenticated, isUser, updateUser);
+router.get('/users/token', isAuthenticated, isUser, sendToken);
 
-// Admin routes (keeping existing functionality for admin use)
+// Protected routes - Admin specific
 router.get('/users', isAuthenticated, isAdmin, getUsers);
 router.get('/users/role/:role', isAuthenticated, isAdmin, getUsersByRole);
 router.get('/users/status/active', isAuthenticated, isAdmin, getActiveUsers);
