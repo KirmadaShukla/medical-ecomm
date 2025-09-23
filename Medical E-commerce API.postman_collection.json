@@ -994,7 +994,7 @@
 					"response": []
 				},
 				{
-					"name": "Create Product",
+					"name": "Add New Product (Admin)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -1009,7 +1009,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Face Mask\",\n  \"slug\": \"face-mask\",\n  \"description\": \"Disposable face mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/mask.jpg\"],\n  \"tags\": [\"mask\", \"disposable\", \"medical\"],\n  \"isActive\": true\n}"
+							"raw": "{\n  \"name\": \"Face Mask\",\n  \"slug\": \"face-mask\",\n  \"description\": \"Disposable face mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/mask.jpg\"],\n  \"tags\": [\"mask\", \"disposable\", \"medical\"],\n  \"price\": 5.99,\n  \"comparePrice\": 7.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Protective Masks\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/admin/products",
@@ -1022,7 +1022,40 @@
 								"products"
 							]
 						},
-						"description": "Create a new product (admin only)"
+						"description": "Add a new product as an admin (no productId provided)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Existing Product (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"products"
+							]
+						},
+						"description": "Add an existing product as an admin (productId provided)"
 					},
 					"response": []
 				},
@@ -1205,7 +1238,7 @@
 			"name": "Vendor Product Operations",
 			"item": [
 				{
-					"name": "Add New Product",
+					"name": "Add New Product (Vendor)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -1220,26 +1253,25 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Hand Sanitizer\",\n  \"slug\": \"hand-sanitizer\",\n  \"description\": \"Alcohol-based hand sanitizer\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/sanitizer.jpg\"],\n  \"tags\": [\"sanitizer\", \"alcohol\", \"hand\"],\n  \"isActive\": true,\n  \"price\": 5.99,\n  \"comparePrice\": 7.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"isFeatured\": false,\n  \"discountPercentage\": 0,\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  }\n}"
+							"raw": "{\n  \"name\": \"Hand Sanitizer\",\n  \"slug\": \"hand-sanitizer\",\n  \"description\": \"Alcohol-based hand sanitizer\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/sanitizer.jpg\"],\n  \"tags\": [\"sanitizer\", \"alcohol\", \"hand\"],\n  \"isActive\": true,\n  \"price\": 5.99,\n  \"comparePrice\": 7.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"isFeatured\": false,\n  \"discountPercentage\": 0,\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Sanitizers\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/vendors/products/new",
+							"raw": "{{base_url}}/api/vendors/products",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"vendors",
-								"products",
-								"new"
+								"products"
 							]
 						},
-						"description": "Add a new product as a vendor"
+						"description": "Add a new product as a vendor (no productId provided)"
 					},
 					"response": []
 				},
 				{
-					"name": "Add Existing Product",
+					"name": "Add Existing Product (Vendor)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -1254,21 +1286,20 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  }\n}"
+							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/vendors/products/existing",
+							"raw": "{{base_url}}/api/vendors/products",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
 								"vendors",
-								"products",
-								"existing"
+								"products"
 							]
 						},
-						"description": "Add an existing product as a vendor"
+						"description": "Add an existing product as a vendor (productId provided)"
 					},
 					"response": []
 				},
@@ -1370,6 +1401,251 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Global Product Management",
+			"item": [
+				{
+					"name": "Get All Global Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/global-products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"global-products"
+							]
+						},
+						"description": "Get all global products (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Global Product by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/global-products/:globalProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"global-products",
+								":globalProductId"
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get global product by ID (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Products by Global Product",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/global-products/:globalProductId/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"global-products",
+								":globalProductId",
+								"products"
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get all products associated with a global product (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Global Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Protective Equipment\",\n  \"slug\": \"protective-equipment\",\n  \"productIds\": [],\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/global-products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"global-products"
+							]
+						},
+						"description": "Create a new global product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Global Product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Protective Equipment\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/global-products/:globalProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"global-products",
+								":globalProductId"
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update a global product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Global Product",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/global-products/:globalProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"global-products",
+								":globalProductId"
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Delete a global product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Product to Global Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"globalProductId\": \"{{global_product_id}}\",\n  \"productId\": \"{{product_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/global-products/add-product",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"global-products",
+								"add-product"
+							]
+						},
+						"description": "Add a product to a global product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Product from Global Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"globalProductId\": \"{{global_product_id}}\",\n  \"productId\": \"{{product_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/global-products/remove-product",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"global-products",
+								"remove-product"
+							]
+						},
+						"description": "Remove a product from a global product (admin only)"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [
@@ -1403,6 +1679,10 @@
 		},
 		{
 			"key": "vendorProductId",
+			"value": ""
+		},
+		{
+			"key": "global_product_id",
 			"value": ""
 		}
 	]

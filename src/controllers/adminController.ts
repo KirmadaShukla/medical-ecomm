@@ -6,8 +6,10 @@ import VendorProduct from '../models/vendorProduct';
 import Admin from '../models/admin';
 import Vendor from '../models/vendors';
 import User, { UserRole, UserStatus } from '../models/User';
+import GlobalProduct from '../models/globalProduct';
 import { generateAdminToken } from '../utils/tokenUtils';
 import { AppError } from '../utils/errorHandler';
+import mongoose from 'mongoose';
 
 // ==================== AUTHENTICATION ====================
 
@@ -410,70 +412,161 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const createProduct = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Check if category exists and is active
-    const category = await Category.findById(req.body.category);
-    if (!category) {
-      res.status(400).json({ message: 'Category not found' });
-      return;
-    }
-    
-    if (!category.isActive) {
-      res.status(400).json({ message: 'Cannot create product. Category is not active' });
-      return;
-    }
-    
-    // Process images to match the required format
-    let images = [];
-    if (req.body.images) {
-      if (Array.isArray(req.body.images)) {
-        // If images is already an array, check if it contains objects or strings
-        images = req.body.images.map((img: any) => {
-          if (typeof img === 'string') {
-            // If it's a string, convert it to the required object format
-            return {
-              url: img,
-              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-              alt: req.body.name || 'Product image'
-            };
-          } else {
-            // If it's already an object, use it as is
-            return img;
-          }
-        });
-      } else if (typeof req.body.images === 'string') {
-        // If images is a string, convert it to the required format
-        images = [{
-          url: req.body.images,
-          publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-          alt: req.body.name || 'Product image'
-        }];
+// Helper function to handle global product logic
+const handleGlobalProduct = async (product: any, globalProductId?: string, globalProductName?: string) => {
+  let globalProduct;
+  
+  if (globalProductId) {
+    // If globalProductId is provided, link to existing global product
+    globalProduct = await GlobalProduct.findById(globalProductId);
+    if (globalProduct) {
+      // Add product to global product if not already there
+      const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
+      if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
+        globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
+        await globalProduct.save();
       }
+      // Set the global product reference on the product
+      product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
+      await product.save();
+    }
+  } else if (globalProductName) {
+    // If globalProductName is provided, create a new global product
+    const slug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    
+    globalProduct = new GlobalProduct({
+      name: globalProductName,
+      slug: slug,
+      productIds: [product._id as mongoose.Types.ObjectId],
+      isActive: true
+    });
+    
+    await globalProduct.save();
+    
+    // Set the global product reference on the product
+    product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
+    await product.save();
+  }
+  
+  return globalProduct;
+};
+
+// Unified function to add products (both new and existing) - for admins
+export const addProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { 
+      productId, // If provided, it's an existing product
+      name, 
+      slug, 
+      description, 
+      category, 
+      brand, 
+      images, 
+      tags,
+      price, 
+      comparePrice, 
+      stock, 
+      sku, 
+      shippingInfo, 
+      globalProductId, 
+      globalProductName 
+    } = req.body;
+    
+    let product;
+    
+    // Check if it's an existing product (productId provided) or new product
+    if (productId) {
+      // Existing product
+      product = await Product.findById(productId);
+      if (!product) {
+        res.status(404).json({ message: 'Product not found' });
+        return;
+      }
+    } else {
+      // New product
+      // Check if category exists and is active
+      const categoryDoc = await Category.findById(category);
+      if (!categoryDoc) {
+        res.status(400).json({ message: 'Category not found' });
+        return;
+      }
+      
+      if (!categoryDoc.isActive) {
+        res.status(400).json({ message: 'Cannot create product. Category is not active' });
+        return;
+      }
+      
+      // Process images to match the required format
+      let processedImages = [];
+      if (images) {
+        if (Array.isArray(images)) {
+          // If images is already an array, check if it contains objects or strings
+          processedImages = images.map((img: any) => {
+            if (typeof img === 'string') {
+              // If it's a string, convert it to the required object format
+              return {
+                url: img,
+                publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+                alt: name || 'Product image'
+              };
+            } else {
+              // If it's already an object, use it as is
+              return img;
+            }
+          });
+        } else if (typeof images === 'string') {
+          // If images is a string, convert it to the required format
+          processedImages = [{
+            url: images,
+            publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+            alt: name || 'Product image'
+          }];
+        }
+      }
+      
+      // Create new product
+      const productData = {
+        name,
+        slug,
+        description,
+        category,
+        brand,
+        images: processedImages,
+        tags,
+        isActive: true
+      };
+      
+      product = new Product(productData);
+      await product.save();
     }
     
-    // Create product with properly formatted data
-    const productData = {
-      ...req.body,
-      images: images
-    };
+    // Handle global product logic
+    const globalProduct = await handleGlobalProduct(
+      product, 
+      globalProductId, 
+      globalProductName
+    );
     
-    const product = new Product(productData);
-    await product.save();
-    console.log("User ID",req.user)
-    // Automatically approve the product
+    // Create vendor product with approved status since admin is adding it
     const vendorProduct = new VendorProduct({
-      productId: product._id,
-      vendorId: req.user._id ,
-      price: req.body.price || 0, // Default to 0 if not provided
-      stock: req.body.stock || 0, // Default to 0 if not provided
-      sku: req.body.sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
-      status: 'approved',
+      productId: product._id as mongoose.Types.ObjectId,
+      vendorId: req.user?._id, // Use authenticated admin ID
+      globalProductId: globalProduct ? globalProduct._id as mongoose.Types.ObjectId : undefined,
+      price: price || 0, // Default to 0 if not provided
+      comparePrice: comparePrice,
+      stock: stock || 0, // Default to 0 if not provided
+      sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
+      status: 'approved', // Approved by default since admin is adding it
+      shippingInfo: shippingInfo
     });
     
     await vendorProduct.save();
     
-    res.status(201).json({ product, vendorProduct });
+    res.status(201).json({ 
+      message: 'Product added successfully.', 
+      product,
+      vendorProduct 
+    });
   } catch (error: any) {
     // Handle duplicate key error (E11000)
     if (error.code === 11000) {
@@ -486,17 +579,19 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
       
       // More specific message based on the duplicate fields
       if (duplicateFields.includes('productId') && duplicateFields.includes('vendorId')) {
-        errorMessage = 'This product is already added.';
+        errorMessage = 'This product is already added for this vendor.';
       } else if (duplicateFields.includes('sku')) {
         errorMessage = `A product with SKU '${duplicateValues.sku}' already exists.`;
-      }
+      } 
       
       res.status(409).json({ 
         message: errorMessage,
+        // Optionally include the duplicate values for debugging (in development)
+        // duplicateValues: duplicateValues
       });
     } else {
       // Handle other errors
-      res.status(400).json({ message: 'Error creating product', error: error.message || error });
+      res.status(400).json({ message: 'Error adding product', error: error.message || error });
     }
   }
 };
@@ -593,65 +688,6 @@ export const updateVendorStatus = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     res.status(400).json({ message: 'Error updating vendor status', error });
-  }
-};
-
-// Add existing product (link to existing product) - for admins
-export const addExistingProduct = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { productId, price, comparePrice, stock, sku, shippingInfo } = req.body;
-    
-    // Check if product exists
-    const existingProduct = await Product.findById(productId);
-    if (!existingProduct) {
-      res.status(404).json({ message: 'Product not found' });
-      return;
-    }
-    
-    // Create vendor product with approved status since admin is adding it
-    const vendorProduct = new VendorProduct({
-      productId: productId,
-      vendorId: req.user?._id, // Use authenticated admin ID
-      price: price || 0, // Default to 0 if not provided
-      comparePrice: comparePrice,
-      stock: stock || 0, // Default to 0 if not provided
-      sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
-      status: 'approved', // Approved by default since admin is adding it
-      shippingInfo: shippingInfo
-    });
-    
-    await vendorProduct.save();
-    
-    res.status(201).json({ 
-      message: 'Product added successfully.', 
-      vendorProduct 
-    });
-  } catch (error: any) {
-    // Handle duplicate key error (E11000)
-    if (error.code === 11000) {
-      // Extract the duplicate key fields from the error
-      const duplicateFields = Object.keys(error.keyPattern);
-      const duplicateValues = error.keyValue;
-      
-      // Create a user-friendly error message
-      let errorMessage = 'Product already exists for this vendor.';
-      
-      // More specific message based on the duplicate fields
-      if (duplicateFields.includes('productId') && duplicateFields.includes('vendorId')) {
-        errorMessage = 'This product is already added for this vendor.';
-      } else if (duplicateFields.includes('sku')) {
-        errorMessage = `A product with SKU '${duplicateValues.sku}' already exists.`;
-      }
-      
-      res.status(409).json({ 
-        message: errorMessage,
-        // Optionally include the duplicate values for debugging (in development)
-        // duplicateValues: duplicateValues
-      });
-    } else {
-      // Handle other errors
-      res.status(400).json({ message: 'Error adding product', error: error.message || error });
-    }
   }
 };
 

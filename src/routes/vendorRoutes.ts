@@ -4,8 +4,7 @@ import {
   vendorLogin,
   sendVendorToken,
   // Product routes
-  addNewProduct, 
-  addExistingProduct, 
+  addProduct, // Using the unified function instead of separate addNewProduct and addExistingProduct
   getVendorProducts, 
   updateVendorProduct, 
   deleteVendorProduct, 
@@ -26,8 +25,7 @@ router.get('/token', isAuthenticated, isVendor, sendVendorToken);
 router.use(isAuthenticated, isVendor);
 
 // Product routes for vendors
-router.post('/products/new', addNewProduct);
-router.post('/products/existing', addExistingProduct);
+router.post('/products', addProduct); // Using the unified function
 router.get('/products', getVendorProducts);
 router.put('/products/:id', updateVendorProduct);
 router.delete('/products/:id', deleteVendorProduct);

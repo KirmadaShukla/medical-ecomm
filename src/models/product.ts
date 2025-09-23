@@ -16,6 +16,7 @@ export interface IProduct extends Document {
   category: mongoose.Types.ObjectId; // Reference to Category model
   subCategory?: mongoose.Types.ObjectId; // Reference to Category model (optional)
   brand?: mongoose.Types.ObjectId; // Reference to Brand model
+  globalProduct?: mongoose.Types.ObjectId; // Reference to GlobalProduct model
   images: IProductImage[];
   tags?: string[];
   isActive: boolean;
@@ -51,9 +52,17 @@ const ProductSchema: Schema = new Schema({
     ref: 'Category', 
     required: true
   },
+  subCategory: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'Category'
+  },
   brand: { 
     type: Schema.Types.ObjectId, 
     ref: 'Brand'
+  },
+  globalProduct: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'GlobalProduct'
   },
   images: [{ 
     url: { 
@@ -89,6 +98,7 @@ ProductSchema.index({ name: 'text', description: 'text' });
 ProductSchema.index({ category: 1 });
 ProductSchema.index({ slug: 1 });
 ProductSchema.index({ isActive: 1 });
+ProductSchema.index({ globalProduct: 1 });
 
 const Product = mongoose.model<IProduct, IProductModel>('Product', ProductSchema);
 export default Product;

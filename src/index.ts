@@ -6,6 +6,8 @@ import userRoutes from './routes/userRoutes';
 import adminRoutes from './routes/adminRoutes';
 import vendorRoutes from './routes/vendorRoutes';
 import productRoutes from './routes/productRoutes';
+import globalProductRoutes from './routes/globalProductRoutes';
+import globalProductSearchRoutes from './routes/globalProductSearchRoutes';
 import { connectDB } from './config/database';
 import { globalErrorHandler } from './middleware/error';
 
@@ -28,6 +30,8 @@ app.use('/api', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/vendor', vendorRoutes);
 app.use('/api', productRoutes);
+app.use('/api/global-products', globalProductRoutes);
+app.use('/api/global-product-search', globalProductSearchRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

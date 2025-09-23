@@ -12,6 +12,7 @@ export interface IVendorProductImage {
 export interface IVendorProduct extends Document {
   productId: mongoose.Types.ObjectId; // Reference to Product
   vendorId: mongoose.Types.ObjectId; // Reference to Vendor
+  globalProductId?: mongoose.Types.ObjectId; // Reference to GlobalProduct
   price: number;
   comparePrice?: number; // Original price for discount calculation
   stock: number;
@@ -45,6 +46,10 @@ const VendorProductSchema: Schema = new Schema({
     type: Schema.Types.ObjectId, 
     ref: 'Vendor', 
     required: true
+  },
+  globalProductId: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'GlobalProduct'
   },
   price: { 
     type: Number, 
@@ -116,6 +121,7 @@ VendorProductSchema.index({ productId: 1, vendorId: 1 }, { unique: true });
 VendorProductSchema.index({ sku: 1 });
 VendorProductSchema.index({ status: 1 });
 VendorProductSchema.index({ vendorId: 1, isFeatured: 1 });
+VendorProductSchema.index({ globalProductId: 1 });
 
 // Virtual for calculating discount amount
 VendorProductSchema.virtual('discountAmount').get(function(this: IVendorProduct) {

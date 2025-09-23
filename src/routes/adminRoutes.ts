@@ -19,14 +19,12 @@ import {
   // Product routes
   getProducts,
   getProductById,
-  createProduct,
+  addProduct, // Using the unified function instead of separate createProduct and addExistingProduct
   updateProduct,
   deleteProduct,
   // Vendor product routes
   getVendorProducts,
   updateVendorProductStatus,
-  // Add existing product route
-  addExistingProduct
 } from '../controllers/adminController';
 import { isAuthenticated, isAdmin } from '../middleware/auth';
 
@@ -56,8 +54,7 @@ router.delete('/brands/:id', isAuthenticated, isAdmin, deleteBrand);
 // Product routes
 router.get('/products', isAuthenticated, isAdmin, getProducts);
 router.get('/products/:id', isAuthenticated, isAdmin, getProductById);
-router.post('/products', isAuthenticated, isAdmin, createProduct);
-router.post('/products/existing', isAuthenticated, isAdmin, addExistingProduct);
+router.post('/products', isAuthenticated, isAdmin, addProduct); // Using the unified function
 router.put('/products/:id', isAuthenticated, isAdmin, updateProduct);
 router.delete('/products/:id', isAuthenticated, isAdmin, deleteProduct);
 

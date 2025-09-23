@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Product from '../models/product';
 import VendorProduct from '../models/vendorProduct';
 import Category from '../models/category';
 import User from '../models/User';
 import Vendor from '../models/vendors';
+import GlobalProduct from '../models/globalProduct';
 import { generateVendorToken } from '../utils/tokenUtils';
 
 // ==================== VENDOR REGISTRATION ====================
@@ -150,154 +152,175 @@ export const sendVendorToken = async (req: Request, res: Response): Promise<void
 
 // ==================== PRODUCTS ====================
 
-// Add new product (create new product and vendor product)
-export const addNewProduct = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Check if category exists and is active
-    const category = await Category.findById(req.body.category);
-    if (!category) {
-      res.status(400).json({ message: 'Category not found' });
-      return;
-    }
-    
-    if (!category.isActive) {
-      res.status(400).json({ message: 'Cannot create product. Category is not active' });
-      return;
-    }
-    
-    // Process images to match the required format
-    let images = [];
-    if (req.body.images) {
-      if (Array.isArray(req.body.images)) {
-        // If images is already an array, check if it contains objects or strings
-        images = req.body.images.map((img: any) => {
-          if (typeof img === 'string') {
-            // If it's a string, convert it to the required object format
-            return {
-              url: img,
-              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-              alt: req.body.name || 'Product image'
-            };
-          } else {
-            // If it's already an object, use it as is
-            return img;
-          }
-        });
-      } else if (typeof req.body.images === 'string') {
-        // If images is a string, convert it to the required format
-        images = [{
-          url: req.body.images,
-          publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-          alt: req.body.name || 'Product image'
-        }];
+// Helper function to handle global product logic
+const handleGlobalProduct = async (product: any, globalProductId?: string, globalProductName?: string) => {
+  let globalProduct;
+  
+  if (globalProductId) {
+    // If globalProductId is provided, link to existing global product
+    globalProduct = await GlobalProduct.findById(globalProductId);
+    if (globalProduct) {
+      // Add product to global product if not already there
+      const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
+      if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
+        globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
+        await globalProduct.save();
       }
+      // Set the global product reference on the product
+      product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
+      await product.save();
     }
+  } else if (globalProductName) {
+    // If globalProductName is provided, create a new global product
+    const slug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     
-    // Create new product
-    const product = new Product({
-      name: req.body.name,
-      slug: req.body.slug,
-      description: req.body.description,
-      category: req.body.category,
-      subCategory: req.body.subCategory,
-      brand: req.body.brand,
-      images: images,
-      tags: req.body.tags,
+    globalProduct = new GlobalProduct({
+      name: globalProductName,
+      slug: slug,
+      productIds: [product._id as mongoose.Types.ObjectId],
       isActive: true
     });
     
+    await globalProduct.save();
+    
+    // Set the global product reference on the product
+    product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
     await product.save();
-    console.log('Product created:', req.user)
-    // Create vendor product with pending status
-    const vendorProduct = new VendorProduct({
-      productId: product._id,
-      vendorId: req.user?._id, // Use authenticated user ID
-      price: req.body.price || 0, // Default to 0 if not provided
-      comparePrice: req.body.comparePrice,
-      stock: req.body.stock || 0, // Default to 0 if not provided
-      sku: req.body.sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
-      status: 'pending', // Set to pending for new products
-      isFeatured: req.body.isFeatured || false,
-      discountPercentage: req.body.discountPercentage,
-      shippingInfo: req.body.shippingInfo,
-      images: images
-    });
-    
-    await vendorProduct.save();
-    
-    res.status(201).json({ 
-      message: 'Product created successfully. Awaiting admin approval.', 
-      product, 
-      vendorProduct 
-    });
-  } catch (error: any) {
-    // Handle duplicate key error (E11000)
-    if (error.code === 11000) {
-      // Extract the duplicate key fields from the error
-      const duplicateFields = Object.keys(error.keyPattern);
-      const duplicateValues = error.keyValue;
-      
-      // Create a user-friendly error message
-      let errorMessage = 'Product already exists for this vendor.';
-      
-      // More specific message based on the duplicate fields
-      if (duplicateFields.includes('productId')) {
-        errorMessage = 'You have already added this product.';
-      } else if (duplicateFields.includes('sku')) {
-        errorMessage = `A product with SKU '${duplicateValues.sku}' already exists.`;
-      }
-      
-      res.status(409).json({ 
-        message: errorMessage,
-        // Optionally include the duplicate values for debugging (in development)
-        // duplicateValues: duplicateValues
-      });
-    } else {
-      // Handle other errors
-      res.status(400).json({ message: 'Error creating product', error: error.message || error });
-    }
   }
+  
+  return globalProduct;
 };
 
-// Add existing product (link to existing product)
-export const addExistingProduct = async (req: Request, res: Response): Promise<void> => {
+// Unified function to add products (both new and existing) - for vendors
+export const addProduct = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { productId, price, comparePrice, stock, sku, shippingInfo } = req.body;
+    const { 
+      productId, // If provided, it's an existing product
+      name, 
+      slug, 
+      description, 
+      category, 
+      subCategory, 
+      brand, 
+      images,
+      tags,
+      price, 
+      comparePrice, 
+      stock, 
+      sku, 
+      shippingInfo, 
+      globalProductId, 
+      globalProductName,
+      isFeatured,
+      discountPercentage
+    } = req.body;
     
-    // Check if product exists
-    const existingProduct = await Product.findById(productId);
-    if (!existingProduct) {
-      res.status(404).json({ message: 'Product not found' });
-      return;
+    let product;
+    let processedImages = []; // Define processedImages at the top scope
+    
+    // Check if it's an existing product (productId provided) or new product
+    if (productId) {
+      // Existing product
+      product = await Product.findById(productId);
+      if (!product) {
+        res.status(404).json({ message: 'Product not found' });
+        return;
+      }
+      
+      // Check if vendor already has this product
+      const existingVendorProduct = await VendorProduct.findOne({
+        productId: productId,
+        vendorId: req.user?.id
+      });
+      
+      if (existingVendorProduct) {
+        res.status(400).json({ message: 'You have already added this product' });
+        return;
+      }
+    } else {
+      // New product
+      // Check if category exists and is active
+      const categoryDoc = await Category.findById(category);
+      if (!categoryDoc) {
+        res.status(400).json({ message: 'Category not found' });
+        return;
+      }
+      
+      if (!categoryDoc.isActive) {
+        res.status(400).json({ message: 'Cannot create product. Category is not active' });
+        return;
+      }
+      
+      // Process images to match the required format
+      if (images) {
+        if (Array.isArray(images)) {
+          // If images is already an array, check if it contains objects or strings
+          processedImages = images.map((img: any) => {
+            if (typeof img === 'string') {
+              // If it's a string, convert it to the required object format
+              return {
+                url: img,
+                publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+                alt: name || 'Product image'
+              };
+            } else {
+              // If it's already an object, use it as is
+              return img;
+            }
+          });
+        } else if (typeof images === 'string') {
+          // If images is a string, convert it to the required format
+          processedImages = [{
+            url: images,
+            publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+            alt: name || 'Product image'
+          }];
+        }
+      }
+      
+      // Create new product
+      const productData = {
+        name,
+        slug,
+        description,
+        category,
+        subCategory,
+        brand,
+        images: processedImages,
+        tags,
+        isActive: true
+      };
+      
+      product = new Product(productData);
+      await product.save();
     }
     
-    // Check if vendor already has this product
-    const existingVendorProduct = await VendorProduct.findOne({
-      productId: productId,
-      vendorId: req.user?._id
-    });
-    
-    if (existingVendorProduct) {
-      res.status(400).json({ message: 'You have already added this product' });
-      return;
-    }
+  await handleGlobalProduct(
+      product, 
+      globalProductId, 
+      globalProductName
+    );
     
     // Create vendor product with pending status
     const vendorProduct = new VendorProduct({
-      productId: productId,
+      productId: product._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated user ID
       price: price || 0, // Default to 0 if not provided
       comparePrice: comparePrice,
       stock: stock || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
-      status: 'pending', // Pending approval for existing products
-      shippingInfo: shippingInfo
+      status: 'pending', // Pending approval for both new and existing products
+      isFeatured: isFeatured || false,
+      discountPercentage: discountPercentage,
+      shippingInfo: shippingInfo,
+      images: productId ? undefined : processedImages // Only set images for new products
     });
     
     await vendorProduct.save();
     
     res.status(201).json({ 
       message: 'Product added successfully. Awaiting admin approval.', 
+      product: productId ? undefined : product, // Only return product for new products
       vendorProduct 
     });
   } catch (error: any) {
@@ -315,6 +338,9 @@ export const addExistingProduct = async (req: Request, res: Response): Promise<v
         errorMessage = 'You have already added this product.';
       } else if (duplicateFields.includes('sku')) {
         errorMessage = `A product with SKU '${duplicateValues.sku}' already exists.`;
+      } else if (duplicateFields.includes('slug')) {
+        // Check if it's a global product slug conflict
+        errorMessage = `A global product with this name already exists.`;
       }
       
       res.status(409).json({ 
