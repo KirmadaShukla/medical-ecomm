@@ -1,8 +1,10 @@
 import jwt from 'jsonwebtoken';
-import { User } from '../models/User';
+import User, { IUser } from '../models/User';
+import Vendor, { IVendor } from '../models/vendors';
+import { UserRole } from '../models/User';
 
 // Generate JWT token
-export const generateToken = (user: User): string => {
+export const generateToken = (user: IUser): string => {
   const payload = { 
     id: user.id, 
     email: user.email, 
@@ -16,8 +18,8 @@ export const generateToken = (user: User): string => {
 };
 
 // Generate token for admin user
-export const generateAdminToken = (user: User): string => {
-  if (user.role !== 'admin') {
+export const generateAdminToken = (user: IUser): string => {
+  if (user.role !== UserRole.ADMIN) {
     throw new Error('User is not an admin');
   }
   
@@ -25,28 +27,26 @@ export const generateAdminToken = (user: User): string => {
 };
 
 // Generate token for vendor user
-export const generateVendorToken = (user: User): string => {
-  if (user.role !== 'vendor') {
-    throw new Error('User is not a vendor');
-  }
+export const generateVendorToken = (vendor: any): string => {
+  // Create a payload that matches the IUser interface
+  const payload = { 
+    id: vendor._id, 
+    email: vendor.businessEmail, 
+    role: vendor.role || 'vendor' 
+  };
   
-  return generateToken(user);
+  const secret = process.env.JWT_SECRET || 'fallback_secret';
+  const expiresIn: any = process.env.JWT_EXPIRES_IN || '7d';
+  
+  return jwt.sign(payload, secret, { expiresIn });
 };
 
 // Generate token for regular user/customer
-export const generateUserToken = (user: User): string => {
-  if (user.role !== 'customer') {
+export const generateUserToken = (user: IUser): string => {
+  if (user.role !== UserRole.BUYER) {
     throw new Error('User is not a customer');
   }
   
   return generateToken(user);
 };
 
-// Verify token
-export const verifyToken = (token: string): any => {
-  try {
-    return jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-  } catch (error) {
-    throw new Error('Invalid token');
-  }
-};

@@ -9,8 +9,7 @@ export const getUsers = catchAsyncError(async (req: Request, res: Response, next
 });
 
 export const getUserById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const user = await User.findById(req.params.id);
-  
+  const user = await User.findById(req.user._id);
   if (!user) {
     return next(new AppError('User not found', 404));
   }
@@ -100,7 +99,7 @@ export const updateUser = catchAsyncError(async (req: Request, res: Response, ne
     country,
   } = req.body;
   
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.user._id);
   
   if (!user) {
     return next(new AppError('User not found', 404));

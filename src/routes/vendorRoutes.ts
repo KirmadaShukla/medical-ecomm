@@ -8,7 +8,8 @@ import {
   addExistingProduct, 
   getVendorProducts, 
   updateVendorProduct, 
-  deleteVendorProduct 
+  deleteVendorProduct, 
+  registerVendor
 } from '../controllers/vendorController';
 import { isAuthenticated, isVendor } from '../middleware/auth';
 
@@ -17,6 +18,7 @@ const router = Router();
 // Public vendor routes
 router.post('/login', vendorLogin);
 
+router.post('/register', registerVendor);
 // Protected vendor routes
 router.get('/token', isAuthenticated, isVendor, sendVendorToken);
 

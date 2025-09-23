@@ -33,20 +33,15 @@ export const registerVendor = async (req: Request, res: Response): Promise<void>
       return;
     }
     
-    // Check if user with this email already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      res.status(409).json({ message: 'User with this email already exists' });
+    // Check if vendor with this email already exists
+    const existingVendor = await Vendor.findOne({ businessEmail: email });
+    if (existingVendor) {
+      res.status(409).json({ message: 'Vendor with this email already exists' });
       return;
     }
     
-  
-    
-    await user.save();
-    
     // Create vendor profile
     const vendor = new Vendor({
-      userId: user._id,
       businessName,
       businessLicense,
       businessAddress,
@@ -54,23 +49,26 @@ export const registerVendor = async (req: Request, res: Response): Promise<void>
       businessEmail: email,
       taxId,
       bankAccount,
-      status: 'pending' // Default to pending for approval
+      status: 'pending', // Default to pending for approval
+      password, // Using the same password for vendor login
+      firstName,
+      lastName,
+      role: 'vendor'
     });
     
     await vendor.save();
     
-    // Generate vendor token
-    const token = generateVendorToken(user);
+    // Generate vendor token (using vendor object but with IUser interface)
+    const token = generateVendorToken(vendor as any); // Type assertion to bypass type checking
     
     // Remove password from output
-    const userObj = user.toObject();
+    const vendorObj = vendor.toObject();
     // @ts-ignore
-    delete userObj.password;
+    delete vendorObj.password;
     
     res.status(201).json({
       message: 'Vendor registered successfully. Awaiting admin approval.',
-      user: userObj,
-      vendor,
+      vendor: vendorObj,
       token
     });
   } catch (error) {
@@ -83,16 +81,16 @@ export const registerVendor = async (req: Request, res: Response): Promise<void>
 // Vendor login
 export const vendorLogin = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { businessEmail, password } = req.body;
     
     // Basic validation
-    if (!email || !password) {
+    if (!businessEmail || !password) {
       res.status(400).json({ message: 'Please provide email and password' });
       return;
     }
     
     // Find vendor user by email and select password
-    const user = await User.findOne({ email, role: 'vendor' }).select('+password');
+    const user = await Vendor.findOne({ businessEmail, role: 'vendor' }).select('+password');
     
     if (!user) {
       res.status(401).json({ message: 'Invalid email or password' });
@@ -107,9 +105,7 @@ export const vendorLogin = async (req: Request, res: Response): Promise<void> =>
       return;
     }
     
-    // Update last login
-    await user.updateLastLogin();
-    
+        
     // Generate vendor token
     const token = generateVendorToken(user);
     
