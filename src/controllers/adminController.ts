@@ -3,12 +3,66 @@ import Category from '../models/category';
 import Brand from '../models/brand';
 import Product from '../models/product';
 import VendorProduct from '../models/vendorProduct';
+import Admin from '../models/admin';
 import Vendor from '../models/vendors';
-import User from '../models/User';
+import User, { UserRole, UserStatus } from '../models/User';
 import { generateAdminToken } from '../utils/tokenUtils';
 import { AppError } from '../utils/errorHandler';
 
 // ==================== AUTHENTICATION ====================
+
+// Admin registration
+export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+    } = req.body;
+    
+    // Basic validation
+    if (!firstName || !lastName || !email || !password) {
+      res.status(400).json({ message: 'Missing required fields: firstName, lastName, email, password' });
+      return;
+    }
+    
+    // Check if admin with this email already exists
+    const existingAdmin = await Admin.findOne({ email, role: 'admin' });
+    if (existingAdmin) {
+      res.status(409).json({ message: 'Admin with this email already exists' });
+      return;
+    }
+    
+    // Create admin user
+    const admin = new Admin({
+      firstName,
+      lastName,
+      email,
+      password,
+      role: 'admin',
+      status: 'active',
+    });
+    
+    await admin.save();
+    
+    // Generate admin token
+    const token = generateAdminToken(admin);
+    
+    // Remove password from output
+    const adminObj = admin.toObject();
+    // @ts-ignore
+    delete adminObj.password;
+    
+    res.status(201).json({
+      message: 'Admin registered successfully',
+      admin: adminObj,
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error registering admin', error });
+  }
+};
 
 // Admin login
 export const adminLogin = async (req: Request, res: Response): Promise<void> => {
@@ -22,7 +76,7 @@ export const adminLogin = async (req: Request, res: Response): Promise<void> => 
     }
     
     // Find admin user by email and select password
-    const user = await User.findOne({ email, role: 'admin' }).select('+password');
+    const user = await Admin.findOne({ email, role: 'admin' }).select('+password');
     
     if (!user) {
       res.status(401).json({ message: 'Invalid email or password' });
@@ -38,7 +92,6 @@ export const adminLogin = async (req: Request, res: Response): Promise<void> => 
     }
     
     // Update last login
-    await user.updateLastLogin();
     
     // Generate admin token
     const token = generateAdminToken(user);
@@ -222,7 +275,12 @@ export const deleteBrand = async (req: Request, res: Response): Promise<void> =>
 
 export const getProducts = async (req: Request, res: Response): Promise<void> => {
   try {
-    const products = await Product.aggregate([
+    // Get pagination parameters from query
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // Build the aggregation pipeline
+    const pipeline = [
       {
         $lookup: {
           from: 'categories',
@@ -268,8 +326,18 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
           brandDetails: 1
         }
       }
-    ]);
-    res.status(200).json(products);
+    ];
+    
+    // Use aggregate pagination
+    const options = {
+      page,
+      limit
+    };
+    
+    const aggregate = Product.aggregate(pipeline);
+    const result = await (Product.aggregatePaginate as any)(aggregate, options);
+    
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching products', error });
   }
@@ -356,25 +424,80 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
       return;
     }
     
-    const product = new Product(req.body);
-    await product.save();
+    // Process images to match the required format
+    let images = [];
+    if (req.body.images) {
+      if (Array.isArray(req.body.images)) {
+        // If images is already an array, check if it contains objects or strings
+        images = req.body.images.map((img: any) => {
+          if (typeof img === 'string') {
+            // If it's a string, convert it to the required object format
+            return {
+              url: img,
+              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+              alt: req.body.name || 'Product image'
+            };
+          } else {
+            // If it's already an object, use it as is
+            return img;
+          }
+        });
+      } else if (typeof req.body.images === 'string') {
+        // If images is a string, convert it to the required format
+        images = [{
+          url: req.body.images,
+          publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+          alt: req.body.name || 'Product image'
+        }];
+      }
+    }
     
+    // Create product with properly formatted data
+    const productData = {
+      ...req.body,
+      images: images
+    };
+    
+    const product = new Product(productData);
+    await product.save();
+    console.log("User ID",req.user)
     // Automatically approve the product
     const vendorProduct = new VendorProduct({
       productId: product._id,
-      vendorId: req.body.adminId, // Assuming adminId is passed in the request
-      price: req.body.price,
-      stock: req.body.stock,
-      sku: req.body.sku,
-      status: 'approved', // Automatically approved by admin
-      images: req.body.images || []
+      vendorId: req.user._id ,
+      price: req.body.price || 0, // Default to 0 if not provided
+      stock: req.body.stock || 0, // Default to 0 if not provided
+      sku: req.body.sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
+      status: 'approved',
     });
     
     await vendorProduct.save();
     
     res.status(201).json({ product, vendorProduct });
-  } catch (error) {
-    res.status(400).json({ message: 'Error creating product', error });
+  } catch (error: any) {
+    // Handle duplicate key error (E11000)
+    if (error.code === 11000) {
+      // Extract the duplicate key fields from the error
+      const duplicateFields = Object.keys(error.keyPattern);
+      const duplicateValues = error.keyValue;
+      
+      // Create a user-friendly error message
+      let errorMessage = 'Product already exists for this vendor.';
+      
+      // More specific message based on the duplicate fields
+      if (duplicateFields.includes('productId') && duplicateFields.includes('vendorId')) {
+        errorMessage = 'This product is already added.';
+      } else if (duplicateFields.includes('sku')) {
+        errorMessage = `A product with SKU '${duplicateValues.sku}' already exists.`;
+      }
+      
+      res.status(409).json({ 
+        message: errorMessage,
+      });
+    } else {
+      // Handle other errors
+      res.status(400).json({ message: 'Error creating product', error: error.message || error });
+    }
   }
 };
 
@@ -473,9 +596,65 @@ export const updateVendorStatus = async (req: Request, res: Response): Promise<v
   }
 };
 
-// ==================== VENDOR PRODUCT MANAGEMENT ====================
+// Add existing product (link to existing product) - for admins
+export const addExistingProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { productId, price, comparePrice, stock, sku, shippingInfo } = req.body;
+    
+    // Check if product exists
+    const existingProduct = await Product.findById(productId);
+    if (!existingProduct) {
+      res.status(404).json({ message: 'Product not found' });
+      return;
+    }
+    
+    // Create vendor product with approved status since admin is adding it
+    const vendorProduct = new VendorProduct({
+      productId: productId,
+      vendorId: req.user?._id, // Use authenticated admin ID
+      price: price || 0, // Default to 0 if not provided
+      comparePrice: comparePrice,
+      stock: stock || 0, // Default to 0 if not provided
+      sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
+      status: 'approved', // Approved by default since admin is adding it
+      shippingInfo: shippingInfo
+    });
+    
+    await vendorProduct.save();
+    
+    res.status(201).json({ 
+      message: 'Product added successfully.', 
+      vendorProduct 
+    });
+  } catch (error: any) {
+    // Handle duplicate key error (E11000)
+    if (error.code === 11000) {
+      // Extract the duplicate key fields from the error
+      const duplicateFields = Object.keys(error.keyPattern);
+      const duplicateValues = error.keyValue;
+      
+      // Create a user-friendly error message
+      let errorMessage = 'Product already exists for this vendor.';
+      
+      // More specific message based on the duplicate fields
+      if (duplicateFields.includes('productId') && duplicateFields.includes('vendorId')) {
+        errorMessage = 'This product is already added for this vendor.';
+      } else if (duplicateFields.includes('sku')) {
+        errorMessage = `A product with SKU '${duplicateValues.sku}' already exists.`;
+      }
+      
+      res.status(409).json({ 
+        message: errorMessage,
+        // Optionally include the duplicate values for debugging (in development)
+        // duplicateValues: duplicateValues
+      });
+    } else {
+      // Handle other errors
+      res.status(400).json({ message: 'Error adding product', error: error.message || error });
+    }
+  }
+};
 
-// Get all vendor products with product and vendor details
 export const getVendorProducts = async (req: Request, res: Response): Promise<void> => {
   try {
     const vendorProducts = await VendorProduct.aggregate([

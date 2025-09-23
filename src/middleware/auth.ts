@@ -77,6 +77,17 @@ export const isVendorAuthenticated = async (req: Request, res: Response, next: N
     // Find vendor in database
     const vendor = await Vendor.findById(decoded.id);
     if (!vendor || vendor.status !== 'approved') {
+      // Check if vendor is pending approval
+      if (vendor && vendor.status === 'pending') {
+        res.status(401).json({ message: 'Please wait for approval from admin side' });
+        return;
+      } else if (vendor && vendor.status === 'rejected') {
+        res.status(401).json({ message: 'Your vendor application has been rejected. Please contact support.' });
+        return;
+      } else if (vendor && vendor.status === 'suspended') {
+        res.status(401).json({ message: 'Your vendor account has been suspended. Please contact support.' });
+        return;
+      }
       res.status(401).json({ message: 'Vendor not found or not approved' });
       return;
     }
@@ -143,24 +154,42 @@ export const isAuthenticated = async (req: Request, res: Response, next: NextFun
     
     // Verify token
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-    
     // Check role and find appropriate user
     let user = null;
     switch (decoded.role) {
       case UserRole.BUYER:
       case 'customer':
         user = await User.findById(decoded.id);
-        if (user && !user.isActive()) user = null;
+        if (user && !user.isActive()) {
+          res.status(401).json({ message: 'Your account is not active. Please contact support.' });
+          return;
+        }
         break;
       case UserRole.VENDOR:
       case 'vendor':
         user = await Vendor.findById(decoded.id);
-        if (user && user.status !== 'approved') user = null;
+        if (user && user.status !== 'approved') {
+          // Check if vendor is pending approval
+          if (user.status === 'pending') {
+            res.status(401).json({ message: 'Please wait for approval from admin side' });
+            return;
+          } else if (user.status === 'rejected') {
+            res.status(401).json({ message: 'Your vendor application has been rejected. Please contact support.' });
+            return;
+          } else if (user.status === 'suspended') {
+            res.status(401).json({ message: 'Your vendor account has been suspended. Please contact support.' });
+            return;
+          }
+          user = null;
+        }
         break;
       case UserRole.ADMIN:
       case 'admin':
         user = await Admin.findById(decoded.id);
-        if (user && !user.isActive) user = null;
+        if (user && !user.isActive) {
+          res.status(401).json({ message: 'Your admin account is not active. Please contact support.' });
+          return;
+        }
         break;
       default:
         res.status(401).json({ message: 'Invalid role in token' });

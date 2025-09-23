@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   // Auth routes
+  registerAdmin,
   adminLogin,
   sendAdminToken,
   // Category routes
@@ -23,13 +24,16 @@ import {
   deleteProduct,
   // Vendor product routes
   getVendorProducts,
-  updateVendorProductStatus
+  updateVendorProductStatus,
+  // Add existing product route
+  addExistingProduct
 } from '../controllers/adminController';
 import { isAuthenticated, isAdmin } from '../middleware/auth';
 
 const router = Router();
 
 // Public admin routes
+router.post('/register', registerAdmin);
 router.post('/login', adminLogin);
 
 // Protected admin routes
@@ -53,6 +57,7 @@ router.delete('/brands/:id', isAuthenticated, isAdmin, deleteBrand);
 router.get('/products', isAuthenticated, isAdmin, getProducts);
 router.get('/products/:id', isAuthenticated, isAdmin, getProductById);
 router.post('/products', isAuthenticated, isAdmin, createProduct);
+router.post('/products/existing', isAuthenticated, isAdmin, addExistingProduct);
 router.put('/products/:id', isAuthenticated, isAdmin, updateProduct);
 router.delete('/products/:id', isAuthenticated, isAdmin, deleteProduct);
 

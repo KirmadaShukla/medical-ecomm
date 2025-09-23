@@ -1,6 +1,13 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Model } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import aggregatePaginate from 'mongoose-aggregate-paginate-v2';
+
+export interface IVendorProductImage {
+  url: string;
+  publicId: string; // Cloudinary public ID
+  alt?: string;
+  isPrimary?: boolean;
+}
 
 export interface IVendorProduct extends Document {
   productId: mongoose.Types.ObjectId; // Reference to Product
@@ -23,6 +30,11 @@ export interface IVendorProduct extends Document {
   updatedAt: Date;
 }
 
+// Extend the model interface to include aggregatePaginate
+interface IVendorProductModel extends Model<IVendorProduct> {
+  aggregatePaginate: typeof aggregatePaginate;
+}
+
 const VendorProductSchema: Schema = new Schema({
   productId: { 
     type: Schema.Types.ObjectId, 
@@ -37,7 +49,8 @@ const VendorProductSchema: Schema = new Schema({
   price: { 
     type: Number, 
     required: true,
-    min: 0
+    min: 0,
+    default: 0
   },
   comparePrice: { 
     type: Number,
@@ -65,7 +78,10 @@ const VendorProductSchema: Schema = new Schema({
     unique: true,
     trim: true,
     uppercase: true,
-    match: [/^[A-Z0-9-]+$/, 'SKU must contain only uppercase letters, numbers, and hyphens']
+    match: [/^[A-Z0-9-]+$/, 'SKU must contain only uppercase letters, numbers, and hyphens'],
+    default: function() {
+      return `SKU-${Date.now()}`;
+    }
   },
   status: { 
     type: String, 
@@ -119,4 +135,5 @@ VendorProductSchema.set('toJSON', {
   virtuals: true
 });
 
-export default mongoose.model<IVendorProduct>('VendorProduct', VendorProductSchema);
+const VendorProduct = mongoose.model<IVendorProduct, IVendorProductModel>('VendorProduct', VendorProductSchema);
+export default VendorProduct;

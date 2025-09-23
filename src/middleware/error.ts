@@ -34,9 +34,25 @@ const handleCastErrorDB = (err: any) => {
 };
 
 const handleDuplicateFieldsDB = (err: any) => {
-  const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0];
-  const message = `Duplicate field value: ${value}. Please use another value!`;
-  return new AppError(message, 400);
+  // Check if this is a vendor product duplicate (productId + vendorId)
+  if (err.errmsg && err.errmsg.includes('productId_1_vendorId_1')) {
+    const message = 'This product is already added for this vendor.';
+    return new AppError(message, 409); // 409 Conflict status code
+  } 
+  // Check if this is an SKU duplicate
+  else if (err.errmsg && err.errmsg.includes('sku_1')) {
+    // Extract the duplicate SKU value from the error message
+    const skuMatch = err.errmsg.match(/dup key: {[^}]*sku: "([^"]*)"/);
+    const duplicateSku = skuMatch ? skuMatch[1] : 'unknown';
+    const message = `A product with SKU '${duplicateSku}' already exists.`;
+    return new AppError(message, 409); // 409 Conflict status code
+  }
+  // Generic duplicate field error
+  else {
+    const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0];
+    const message = `Duplicate field value: ${value}. Please use another value!`;
+    return new AppError(message, 400);
+  }
 };
 
 const handleValidationErrorDB = (err: any) => {

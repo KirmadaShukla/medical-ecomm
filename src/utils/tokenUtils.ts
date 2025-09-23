@@ -4,9 +4,10 @@ import Vendor, { IVendor } from '../models/vendors';
 import { UserRole } from '../models/User';
 
 // Generate JWT token
-export const generateToken = (user: IUser): string => {
+export const generateToken = (user: any): string => {
+  console.log("userr",user)
   const payload = { 
-    id: user.id, 
+    id: user._id, 
     email: user.email, 
     role: user.role 
   };
@@ -18,7 +19,8 @@ export const generateToken = (user: IUser): string => {
 };
 
 // Generate token for admin user
-export const generateAdminToken = (user: IUser): string => {
+export const generateAdminToken = (user: any): string => {
+  console.log("userr",user)
   if (user.role !== UserRole.ADMIN) {
     throw new Error('User is not an admin');
   }

@@ -165,6 +165,34 @@ export const addNewProduct = async (req: Request, res: Response): Promise<void> 
       return;
     }
     
+    // Process images to match the required format
+    let images = [];
+    if (req.body.images) {
+      if (Array.isArray(req.body.images)) {
+        // If images is already an array, check if it contains objects or strings
+        images = req.body.images.map((img: any) => {
+          if (typeof img === 'string') {
+            // If it's a string, convert it to the required object format
+            return {
+              url: img,
+              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+              alt: req.body.name || 'Product image'
+            };
+          } else {
+            // If it's already an object, use it as is
+            return img;
+          }
+        });
+      } else if (typeof req.body.images === 'string') {
+        // If images is a string, convert it to the required format
+        images = [{
+          url: req.body.images,
+          publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+          alt: req.body.name || 'Product image'
+        }];
+      }
+    }
+    
     // Create new product
     const product = new Product({
       name: req.body.name,
@@ -173,25 +201,26 @@ export const addNewProduct = async (req: Request, res: Response): Promise<void> 
       category: req.body.category,
       subCategory: req.body.subCategory,
       brand: req.body.brand,
-      images: req.body.images,
+      images: images,
       tags: req.body.tags,
       isActive: true
     });
     
     await product.save();
-    
+    console.log('Product created:', req.user)
     // Create vendor product with pending status
     const vendorProduct = new VendorProduct({
       productId: product._id,
-      vendorId: req.user.id, // Assuming vendor ID is in the authenticated user object
-      price: req.body.price,
+      vendorId: req.user?._id, // Use authenticated user ID
+      price: req.body.price || 0, // Default to 0 if not provided
       comparePrice: req.body.comparePrice,
-      stock: req.body.stock,
-      sku: req.body.sku,
+      stock: req.body.stock || 0, // Default to 0 if not provided
+      sku: req.body.sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
       status: 'pending', // Set to pending for new products
       isFeatured: req.body.isFeatured || false,
       discountPercentage: req.body.discountPercentage,
-      shippingInfo: req.body.shippingInfo
+      shippingInfo: req.body.shippingInfo,
+      images: images
     });
     
     await vendorProduct.save();
@@ -201,8 +230,32 @@ export const addNewProduct = async (req: Request, res: Response): Promise<void> 
       product, 
       vendorProduct 
     });
-  } catch (error) {
-    res.status(400).json({ message: 'Error creating product', error });
+  } catch (error: any) {
+    // Handle duplicate key error (E11000)
+    if (error.code === 11000) {
+      // Extract the duplicate key fields from the error
+      const duplicateFields = Object.keys(error.keyPattern);
+      const duplicateValues = error.keyValue;
+      
+      // Create a user-friendly error message
+      let errorMessage = 'Product already exists for this vendor.';
+      
+      // More specific message based on the duplicate fields
+      if (duplicateFields.includes('productId')) {
+        errorMessage = 'You have already added this product.';
+      } else if (duplicateFields.includes('sku')) {
+        errorMessage = `A product with SKU '${duplicateValues.sku}' already exists.`;
+      }
+      
+      res.status(409).json({ 
+        message: errorMessage,
+        // Optionally include the duplicate values for debugging (in development)
+        // duplicateValues: duplicateValues
+      });
+    } else {
+      // Handle other errors
+      res.status(400).json({ message: 'Error creating product', error: error.message || error });
+    }
   }
 };
 
@@ -221,7 +274,7 @@ export const addExistingProduct = async (req: Request, res: Response): Promise<v
     // Check if vendor already has this product
     const existingVendorProduct = await VendorProduct.findOne({
       productId: productId,
-      vendorId: req.user.id
+      vendorId: req.user?._id
     });
     
     if (existingVendorProduct) {
@@ -232,11 +285,11 @@ export const addExistingProduct = async (req: Request, res: Response): Promise<v
     // Create vendor product with pending status
     const vendorProduct = new VendorProduct({
       productId: productId,
-      vendorId: req.user.id, // Assuming vendor ID is in the authenticated user object
-      price: price,
+      vendorId: req.user?._id, // Use authenticated user ID
+      price: price || 0, // Default to 0 if not provided
       comparePrice: comparePrice,
-      stock: stock,
-      sku: sku,
+      stock: stock || 0, // Default to 0 if not provided
+      sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
       status: 'pending', // Pending approval for existing products
       shippingInfo: shippingInfo
     });
@@ -247,18 +300,47 @@ export const addExistingProduct = async (req: Request, res: Response): Promise<v
       message: 'Product added successfully. Awaiting admin approval.', 
       vendorProduct 
     });
-  } catch (error) {
-    res.status(400).json({ message: 'Error adding product', error });
+  } catch (error: any) {
+    // Handle duplicate key error (E11000)
+    if (error.code === 11000) {
+      // Extract the duplicate key fields from the error
+      const duplicateFields = Object.keys(error.keyPattern);
+      const duplicateValues = error.keyValue;
+      
+      // Create a user-friendly error message
+      let errorMessage = 'Product already exists for this vendor.';
+      
+      // More specific message based on the duplicate fields
+      if (duplicateFields.includes('productId') && duplicateFields.includes('vendorId')) {
+        errorMessage = 'You have already added this product.';
+      } else if (duplicateFields.includes('sku')) {
+        errorMessage = `A product with SKU '${duplicateValues.sku}' already exists.`;
+      }
+      
+      res.status(409).json({ 
+        message: errorMessage,
+        // Optionally include the duplicate values for debugging (in development)
+        // duplicateValues: duplicateValues
+      });
+    } else {
+      // Handle other errors
+      res.status(400).json({ message: 'Error adding product', error: error.message || error });
+    }
   }
 };
 
 // Get vendor's products with aggregation for better performance
 export const getVendorProducts = async (req: Request, res: Response): Promise<void> => {
   try {
-    const vendorProducts = await VendorProduct.aggregate([
+    // Get pagination parameters from query
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // Build the aggregation pipeline
+    const pipeline: any[] = [
       {
         $match: {
-          vendorId: req.user.id
+          vendorId: req.user._id
         }
       },
       {
@@ -329,9 +411,18 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
           createdAt: -1
         }
       }
-    ]);
-      
-    res.status(200).json(vendorProducts);
+    ];
+    
+    // Use aggregate pagination
+    const options = {
+      page,
+      limit
+    };
+    
+    const aggregate = VendorProduct.aggregate(pipeline);
+    const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
+    
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching products', error });
   }
