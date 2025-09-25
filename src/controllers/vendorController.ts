@@ -156,27 +156,24 @@ export const sendVendorToken = async (req: Request, res: Response): Promise<void
 const handleGlobalProduct = async (product: any, globalProductId?: string, globalProductName?: string) => {
   let globalProduct;
   
-  if (globalProductId) {
-    // If globalProductId is provided, link to existing global product
+  if (globalProductId && !product) {
+    // Case 1: Global product ID exists but product doesn't exist
+    // Create a new product and associate it with the existing global product
     globalProduct = await GlobalProduct.findById(globalProductId);
     if (globalProduct) {
-      // Add product to global product if not already there
-      const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
-      if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
-        globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
-        await globalProduct.save();
-      }
-      // Set the global product reference on the product
-      product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-      await product.save();
+      // Create a new product since it doesn't exist
+      // This case should be handled in the main function where product creation happens
+      // Here we just return the global product for reference
+      return globalProduct;
     }
-  } else if (globalProductName) {
-    // If globalProductName is provided, create a new global product
-    const slug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  } else if (!globalProductId && product && globalProductName) {
+    // Case 2: Product exists but global product ID doesn't exist, global product name is provided
+    // Create a new global product and associate it with the existing product
+    const globalProductSlug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     
     globalProduct = new GlobalProduct({
       name: globalProductName,
-      slug: slug,
+      slug: globalProductSlug,
       productIds: [product._id as mongoose.Types.ObjectId],
       isActive: true
     });
@@ -186,6 +183,38 @@ const handleGlobalProduct = async (product: any, globalProductId?: string, globa
     // Set the global product reference on the product
     product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
     await product.save();
+  } else if (globalProductId && product) {
+    // Case 3: Both global product ID and product exist
+    // Associate them if not already associated
+    globalProduct = await GlobalProduct.findById(globalProductId);
+    if (globalProduct) {
+      // Add product to global product if not already there
+      const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
+      if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
+        globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
+        await globalProduct.save();
+      }
+      // Set the global product reference on the product if not already set
+      if (!product.globalProduct) {
+        product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
+        await product.save();
+      }
+    }
+  } else if (!globalProductId && !product && globalProductName) {
+    // Case 4: Neither global product ID nor product exist, but global product name is provided
+    // Create both new product and new global product
+    const globalProductSlug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    
+    globalProduct = new GlobalProduct({
+      name: globalProductName,
+      slug: globalProductSlug,
+      productIds: [], // Will be populated after product creation
+      isActive: true
+    });
+    
+    await globalProduct.save();
+    // Product will be created in the main function and then associated
+    return globalProduct;
   }
   
   return globalProduct;
@@ -197,7 +226,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
     const { 
       productId, // If provided, it's an existing product
       name, 
-      slug, 
+      slug: productSlug, 
       description, 
       category, 
       subCategory, 
@@ -218,27 +247,16 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
     let product;
     let processedImages = []; // Define processedImages at the top scope
     
-    // Check if it's an existing product (productId provided) or new product
-    if (productId) {
-      // Existing product
-      product = await Product.findById(productId);
-      if (!product) {
-        res.status(404).json({ message: 'Product not found' });
+    // Handle all 4 cases for global product and product association
+    if (!productId && globalProductId && !globalProductName) {
+      // Case 1: Global product ID exists but product ID doesn't exist
+      // Create a new product and associate it with the existing global product
+      const globalProduct = await GlobalProduct.findById(globalProductId);
+      if (!globalProduct) {
+        res.status(404).json({ message: 'Global product not found' });
         return;
       }
       
-      // Check if vendor already has this product
-      const existingVendorProduct = await VendorProduct.findOne({
-        productId: productId,
-        vendorId: req.user?.id
-      });
-      
-      if (existingVendorProduct) {
-        res.status(400).json({ message: 'You have already added this product' });
-        return;
-      }
-    } else {
-      // New product
       // Check if category exists and is active
       const categoryDoc = await Category.findById(category);
       if (!categoryDoc) {
@@ -281,7 +299,128 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       // Create new product
       const productData = {
         name,
-        slug,
+        slug: productSlug,
+        description,
+        category,
+        subCategory,
+        brand,
+        images: processedImages,
+        tags,
+        isActive: true,
+        globalProduct: globalProductId
+      };
+      
+      product = new Product(productData);
+      await product.save();
+      
+      // Add product to global product
+      const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
+      if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
+        globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
+        await globalProduct.save();
+      }
+    } else if (productId && !globalProductId) {
+      // Case 2 & 3: Product ID exists but global product ID doesn't exist (Case 2) or both exist (Case 3)
+      // Existing product
+      product = await Product.findById(productId);
+      if (!product) {
+        res.status(404).json({ message: 'Product not found' });
+        return;
+      }
+      
+      // Check if vendor already has this product
+      const existingVendorProduct = await VendorProduct.findOne({
+        productId: productId,
+        vendorId: req.user?.id
+      });
+      
+      if (existingVendorProduct) {
+        res.status(400).json({ message: 'You have already added this product' });
+        return;
+      }
+      
+      // Handle global product association if globalProductName is provided
+      if (globalProductName) {
+        // Case 2: Product exists but global product ID doesn't exist, global product name is provided
+        // Create a new global product and associate it with the existing product
+        const globalProductSlug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        
+        const globalProduct = new GlobalProduct({
+          name: globalProductName,
+          slug: globalProductSlug,
+          productIds: [product._id as mongoose.Types.ObjectId],
+          isActive: true
+        });
+        
+        await globalProduct.save();
+        
+        // Set the global product reference on the product
+        product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
+        await product.save();
+      } else if (globalProductId) {
+        // Case 3: Both global product ID and product exist
+        // Associate them if not already associated
+        const globalProduct = await GlobalProduct.findById(globalProductId);
+        if (globalProduct) {
+          // Add product to global product if not already there
+          const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
+          if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
+            globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
+            await globalProduct.save();
+          }
+          // Set the global product reference on the product if not already set
+          if (!product.globalProduct) {
+            product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
+            await product.save();
+          }
+        }
+      }
+    } else if (!productId && !globalProductId && globalProductName) {
+      // Case 4: Neither global product ID nor product ID exist, but global product name is provided
+      // Create both new product and new global product
+      // Check if category exists and is active
+      const categoryDoc = await Category.findById(category);
+      if (!categoryDoc) {
+        res.status(400).json({ message: 'Category not found' });
+        return;
+      }
+      
+      if (!categoryDoc.isActive) {
+        res.status(400).json({ message: 'Cannot create product. Category is not active' });
+        return;
+      }
+      
+      // Process images to match the required format
+      if (images) {
+        if (Array.isArray(images)) {
+          // If images is already an array, check if it contains objects or strings
+          processedImages = images.map((img: any) => {
+            if (typeof img === 'string') {
+              // If it's a string, convert it to the required object format
+              return {
+                url: img,
+                publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+                alt: name || 'Product image'
+              };
+            } else {
+              // If it's already an object, use it as is
+              return img;
+            }
+          });
+        } else if (typeof images === 'string') {
+          // If images is a string, convert it to the required format
+          processedImages = [{
+            url: images,
+            publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+            alt: name || 'Product image'
+          }];
+        }
+      }
+      
+      // Create new product
+      const productData = {
+        name,
+        slug: productSlug,
         description,
         category,
         subCategory,
@@ -293,13 +432,107 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       
       product = new Product(productData);
       await product.save();
+      
+      // Create new global product
+      const globalProductSlug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      
+      const globalProduct = new GlobalProduct({
+        name: globalProductName,
+        slug: globalProductSlug,
+        productIds: [product._id as mongoose.Types.ObjectId],
+        isActive: true
+      });
+      
+      await globalProduct.save();
+      
+      // Set the global product reference on the product
+      product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
+      await product.save();
+    } else {
+      // Default case: productId provided or no global product information provided
+      if (productId) {
+        // Existing product
+        product = await Product.findById(productId);
+        if (!product) {
+          res.status(404).json({ message: 'Product not found' });
+          return;
+        }
+        
+        // Check if vendor already has this product
+        const existingVendorProduct = await VendorProduct.findOne({
+          productId: productId,
+          vendorId: req.user?.id
+        });
+        
+        if (existingVendorProduct) {
+          res.status(400).json({ message: 'You have already added this product' });
+          return;
+        }
+      } else {
+        // New product
+        // Check if category exists and is active
+        const categoryDoc = await Category.findById(category);
+        if (!categoryDoc) {
+          res.status(400).json({ message: 'Category not found' });
+          return;
+        }
+        
+        if (!categoryDoc.isActive) {
+          res.status(400).json({ message: 'Cannot create product. Category is not active' });
+          return;
+        }
+        
+        // Process images to match the required format
+        if (images) {
+          if (Array.isArray(images)) {
+            // If images is already an array, check if it contains objects or strings
+            processedImages = images.map((img: any) => {
+              if (typeof img === 'string') {
+                // If it's a string, convert it to the required object format
+                return {
+                  url: img,
+                  publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+                  alt: name || 'Product image'
+                };
+              } else {
+                // If it's already an object, use it as is
+                return img;
+              }
+            });
+          } else if (typeof images === 'string') {
+            // If images is a string, convert it to the required format
+            processedImages = [{
+              url: images,
+              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+              alt: name || 'Product image'
+            }];
+          }
+        }
+        
+        // Create new product
+        const productData = {
+          name,
+          slug: productSlug,
+          description,
+          category,
+          subCategory,
+          brand,
+          images: processedImages,
+          tags,
+          isActive: true
+        };
+        
+        product = new Product(productData);
+        await product.save();
+      }
+      
+      // Handle global product association
+      await handleGlobalProduct(
+        product, 
+        globalProductId, 
+        globalProductName
+      );
     }
-    
-  await handleGlobalProduct(
-      product, 
-      globalProductId, 
-      globalProductName
-    );
     
     // Create vendor product with pending status
     const vendorProduct = new VendorProduct({

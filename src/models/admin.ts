@@ -5,7 +5,6 @@ export interface IAdmin extends Document {
   email: string;
   password: string;
   role: string; // Add role field
-  department: string;
   lastLoginAt?: Date;
   isActive: boolean;
   comparePassword: (candidatePassword: string) => Promise<boolean>;
@@ -29,11 +28,6 @@ const AdminSchema: Schema = new Schema({
   role: { 
     type: String, 
     default: 'admin' // Set default role
-  },
-  department: { 
-    type: String, 
-    required: true,
-    trim: true
   },
   lastLoginAt: { 
     type: Date 
@@ -65,7 +59,6 @@ AdminSchema.methods.comparePassword = async function(candidatePassword: string):
 };
 
 // Index for better query performance
-AdminSchema.index({ department: 1 });
 AdminSchema.index({ isActive: 1 });
 AdminSchema.index({ email: 1 }); // Add index for email
 
