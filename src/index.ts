@@ -8,6 +8,8 @@ import vendorRoutes from './routes/vendorRoutes';
 import productRoutes from './routes/productRoutes';
 import globalProductRoutes from './routes/globalProductRoutes';
 import globalProductSearchRoutes from './routes/globalProductSearchRoutes';
+import cartRoutes from './routes/cartRoutes';
+import wishlistRoutes from './routes/wishlistRoutes';
 import { connectDB } from './config/database';
 import { globalErrorHandler } from './middleware/error';
 
@@ -29,12 +31,14 @@ app.use(express.json());
 app.use(morgan('combined')); // Add Morgan middleware for logging
 
 // Routes
-app.use('/api', userRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/vendor', vendorRoutes);
-app.use('/api', productRoutes);
-app.use('/api/global-products', globalProductRoutes);
-app.use('/api/global-product-search', globalProductSearchRoutes);
+app.use('/api/v1', userRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/vendor', vendorRoutes);
+app.use('/api/v1', productRoutes);
+app.use('/api/v1/global-products', globalProductRoutes);
+app.use('/api/v1/global-product-search', globalProductSearchRoutes);
+app.use('/api/v1/cart', cartRoutes);
+app.use('/api/v1/wishlist', wishlistRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
