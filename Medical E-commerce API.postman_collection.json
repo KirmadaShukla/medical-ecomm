@@ -23,12 +23,11 @@
 							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"password123\",\n  \"phoneNumber\": \"+1234567890\",\n  \"dateOfBirth\": \"1990-01-01\",\n  \"address\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zipCode\": \"10001\",\n  \"country\": \"USA\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/users",
+							"raw": "{{base_url}}/users",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
-								"api",
 								"users"
 							]
 						},
@@ -51,7 +50,7 @@
 							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"password123\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/users/login",
+							"raw": "{{base_url}}/users/login",
 							"host": [
 								"{{base_url}}"
 							],
@@ -80,7 +79,7 @@
 							"raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"jane.smith@vendor.com\",\n  \"password\": \"password123\",\n  \"businessName\": \"MediSupply Inc.\",\n  \"businessLicense\": \"MED-12345\",\n  \"businessAddress\": \"456 Business Ave\",\n  \"businessPhone\": \"+1987654321\",\n  \"taxId\": \"TAX-67890\",\n  \"bankAccount\": {\n    \"accountNumber\": \"1234567890\",\n    \"routingNumber\": \"987654321\",\n    \"bankName\": \"Bank of America\"\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/vendors/register",
+							"raw": "{{base_url}}/vendors/register",
 							"host": [
 								"{{base_url}}"
 							],
@@ -109,7 +108,7 @@
 							"raw": "{\n  \"email\": \"jane.smith@vendor.com\",\n  \"password\": \"password123\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/vendors/login",
+							"raw": "{{base_url}}/vendors/login",
 							"host": [
 								"{{base_url}}"
 							],
@@ -138,7 +137,7 @@
 							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/login",
+							"raw": "{{base_url}}/admin/login",
 							"host": [
 								"{{base_url}}"
 							],
@@ -168,7 +167,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/users/profile",
+							"raw": "{{base_url}}/users/profile",
 							"host": [
 								"{{base_url}}"
 							],
@@ -201,7 +200,7 @@
 							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe Updated\",\n  \"phoneNumber\": \"+1234567891\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/users/profile",
+							"raw": "{{base_url}}/users/profile",
 							"host": [
 								"{{base_url}}"
 							],
@@ -226,7 +225,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/users/token",
+							"raw": "{{base_url}}/users/token",
 							"host": [
 								"{{base_url}}"
 							],
@@ -256,7 +255,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/users",
+							"raw": "{{base_url}}/users",
 							"host": [
 								"{{base_url}}"
 							],
@@ -280,7 +279,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/users/role/customer",
+							"raw": "{{base_url}}/users/role/customer",
 							"host": [
 								"{{base_url}}"
 							],
@@ -306,7 +305,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/users/status/active",
+							"raw": "{{base_url}}/users/status/active",
 							"host": [
 								"{{base_url}}"
 							],
@@ -332,7 +331,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/users/:userId",
+							"raw": "{{base_url}}/users/:userId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -371,7 +370,7 @@
 							"raw": "{\n  \"firstName\": \"Updated Name\",\n  \"status\": \"inactive\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/users/:userId",
+							"raw": "{{base_url}}/users/:userId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -402,7 +401,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/users/:userId",
+							"raw": "{{base_url}}/users/:userId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -433,7 +432,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/token",
+							"raw": "{{base_url}}/admin/token",
 							"host": [
 								"{{base_url}}"
 							],
@@ -463,7 +462,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/categories",
+							"raw": "{{base_url}}/admin/categories",
 							"host": [
 								"{{base_url}}"
 							],
@@ -488,7 +487,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/categories/:categoryId",
+							"raw": "{{base_url}}/admin/categories/:categoryId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -525,10 +524,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Medical Devices\",\n  \"description\": \"Medical devices and equipment\",\n  \"slug\": \"medical-devices\",\n  \"isActive\": true,\n  \"sortOrder\": 1\n}"
+							"raw": "{\n  \"name\": \"Medical Devices\",\n  \"description\": \"Medical devices and equipment\",\n  \"isActive\": true,\n  \"sortOrder\": 1\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/categories",
+							"raw": "{{base_url}}/admin/categories",
 							"host": [
 								"{{base_url}}"
 							],
@@ -561,7 +560,7 @@
 							"raw": "{\n  \"name\": \"Updated Medical Devices\",\n  \"isActive\": false\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/categories/:categoryId",
+							"raw": "{{base_url}}/admin/categories/:categoryId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -593,7 +592,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/categories/:categoryId",
+							"raw": "{{base_url}}/admin/categories/:categoryId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -630,7 +629,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/brands",
+							"raw": "{{base_url}}/admin/brands",
 							"host": [
 								"{{base_url}}"
 							],
@@ -655,7 +654,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/brands/:brandId",
+							"raw": "{{base_url}}/admin/brands/:brandId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -692,10 +691,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"MediBrand\",\n  \"description\": \"Quality medical products\",\n  \"slug\": \"medibrand\",\n  \"logo\": \"https://example.com/logo.png\",\n  \"isActive\": true,\n  \"sortOrder\": 1\n}"
+							"raw": "{\n  \"name\": \"MediBrand\",\n  \"description\": \"Quality medical products\",\n  \"logo\": \"https://example.com/logo.png\",\n  \"isActive\": true,\n  \"sortOrder\": 1\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/brands",
+							"raw": "{{base_url}}/admin/brands",
 							"host": [
 								"{{base_url}}"
 							],
@@ -728,7 +727,7 @@
 							"raw": "{\n  \"name\": \"Updated MediBrand\",\n  \"isActive\": false\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/brands/:brandId",
+							"raw": "{{base_url}}/admin/brands/:brandId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -760,7 +759,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/brands/:brandId",
+							"raw": "{{base_url}}/admin/brands/:brandId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -792,7 +791,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/products",
+							"raw": "{{base_url}}/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -811,7 +810,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/products/:productId",
+							"raw": "{{base_url}}/products/:productId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -837,7 +836,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/products/search?q=mask",
+							"raw": "{{base_url}}/products/search?q=mask",
 							"host": [
 								"{{base_url}}"
 							],
@@ -863,7 +862,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/products/category/:categoryId",
+							"raw": "{{base_url}}/products/category/:categoryId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -890,7 +889,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/products/brand/:brandId",
+							"raw": "{{base_url}}/products/brand/:brandId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -917,7 +916,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/products/featured",
+							"raw": "{{base_url}}/products/featured",
 							"host": [
 								"{{base_url}}"
 							],
@@ -947,7 +946,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/products",
+							"raw": "{{base_url}}/admin/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -972,7 +971,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/products/:productId",
+							"raw": "{{base_url}}/admin/products/:productId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1009,10 +1008,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Face Mask\",\n  \"slug\": \"face-mask\",\n  \"description\": \"Disposable face mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/mask.jpg\"],\n  \"tags\": [\"mask\", \"disposable\", \"medical\"],\n  \"price\": 5.99,\n  \"comparePrice\": 7.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Protective Masks\"\n}"
+							"raw": "{\n  \"name\": \"Face Mask\",\n  \"description\": \"Disposable face mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/mask.jpg\"],\n  \"tags\": [\"mask\", \"disposable\", \"medical\"],\n  \"price\": 5.99,\n  \"comparePrice\": 7.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Protective Masks\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/products",
+							"raw": "{{base_url}}/admin/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1045,7 +1044,7 @@
 							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/products",
+							"raw": "{{base_url}}/admin/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1078,7 +1077,7 @@
 							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Protective Masks\"\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/products",
+							"raw": "{{base_url}}/admin/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1111,7 +1110,7 @@
 							"raw": "{\n  \"name\": \"Updated Face Mask\",\n  \"isActive\": false\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/products/:productId",
+							"raw": "{{base_url}}/admin/products/:productId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1143,7 +1142,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/products/:productId",
+							"raw": "{{base_url}}/admin/products/:productId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1180,10 +1179,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"N95 Mask\",\n  \"slug\": \"n95-mask\",\n  \"description\": \"N95 protective mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/n95.jpg\"],\n  \"tags\": [\"mask\", \"n95\", \"medical\"],\n  \"price\": 7.99,\n  \"comparePrice\": 9.99,\n  \"stock\": 50,\n  \"sku\": \"N95-001\",\n  \"shippingInfo\": {\n    \"weight\": 0.3,\n    \"dimensions\": {\n      \"length\": 8,\n      \"width\": 6,\n      \"height\": 2\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n  // Case 1: Global product ID exists but product ID doesn't exist\n}"
+							"raw": "{\n  \"name\": \"N95 Mask\",\n  \"description\": \"N95 protective mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/n95.jpg\"],\n  \"tags\": [\"mask\", \"n95\", \"medical\"],\n  \"price\": 7.99,\n  \"comparePrice\": 9.99,\n  \"stock\": 50,\n  \"sku\": \"N95-001\",\n  \"shippingInfo\": {\n    \"weight\": 0.3,\n    \"dimensions\": {\n      \"length\": 8,\n      \"width\": 6,\n      \"height\": 2\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n  // Case 1: Global product ID exists but product ID doesn't exist\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/products",
+							"raw": "{{base_url}}/admin/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1213,7 +1212,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/admin/vendor-products",
+							"raw": "{{base_url}}/admin/vendor-products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1246,7 +1245,7 @@
 							"raw": "{\n  \"status\": \"approved\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/admin/vendor-products/:vendorProductId/status",
+							"raw": "{{base_url}}/admin/vendor-products/:vendorProductId/status",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1284,7 +1283,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/vendors/token",
+							"raw": "{{base_url}}/vendors/token",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1319,10 +1318,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Hand Sanitizer\",\n  \"slug\": \"hand-sanitizer\",\n  \"description\": \"Alcohol-based hand sanitizer\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/sanitizer.jpg\"],\n  \"tags\": [\"sanitizer\", \"alcohol\", \"hand\"],\n  \"isActive\": true,\n  \"price\": 5.99,\n  \"comparePrice\": 7.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"isFeatured\": false,\n  \"discountPercentage\": 0,\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Sanitizers\"\n}"
+							"raw": "{\n  \"name\": \"Hand Sanitizer\",\n  \"description\": \"Alcohol-based hand sanitizer\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/sanitizer.jpg\"],\n  \"tags\": [\"sanitizer\", \"alcohol\", \"hand\"],\n  \"isActive\": true,\n  \"price\": 5.99,\n  \"comparePrice\": 7.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"isFeatured\": false,\n  \"discountPercentage\": 0,\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Sanitizers\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/vendors/products",
+							"raw": "{{base_url}}/vendors/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1355,7 +1354,7 @@
 							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/vendors/products",
+							"raw": "{{base_url}}/vendors/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1388,7 +1387,7 @@
 							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Protective Masks\"\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/vendors/products",
+							"raw": "{{base_url}}/vendors/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1413,7 +1412,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/vendors/products",
+							"raw": "{{base_url}}/vendors/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1446,7 +1445,7 @@
 							"raw": "{\n  \"price\": 5.49,\n  \"stock\": 75\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/vendors/products/:vendorProductId",
+							"raw": "{{base_url}}/vendors/products/:vendorProductId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1478,7 +1477,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/vendors/products/:vendorProductId",
+							"raw": "{{base_url}}/vendors/products/:vendorProductId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1515,10 +1514,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Surgical Mask\",\n  \"slug\": \"surgical-mask\",\n  \"description\": \"Surgical mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/surgical.jpg\"],\n  \"tags\": [\"mask\", \"surgical\", \"medical\"],\n  \"price\": 3.99,\n  \"comparePrice\": 5.99,\n  \"stock\": 100,\n  \"sku\": \"SURG-001\",\n  \"shippingInfo\": {\n    \"weight\": 0.2,\n    \"dimensions\": {\n      \"length\": 7,\n      \"width\": 5,\n      \"height\": 1\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n  // Case 1: Global product ID exists but product ID doesn't exist\n}"
+							"raw": "{\n  \"name\": \"Surgical Mask\",\n  \"description\": \"Surgical mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/surgical.jpg\"],\n  \"tags\": [\"mask\", \"surgical\", \"medical\"],\n  \"price\": 3.99,\n  \"comparePrice\": 5.99,\n  \"stock\": 100,\n  \"sku\": \"SURG-001\",\n  \"shippingInfo\": {\n    \"weight\": 0.2,\n    \"dimensions\": {\n      \"length\": 7,\n      \"width\": 5,\n      \"height\": 1\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n  // Case 1: Global product ID exists but product ID doesn't exist\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/vendors/products",
+							"raw": "{{base_url}}/vendors/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1543,7 +1542,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/global-products",
+							"raw": "{{base_url}}/global-products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1562,7 +1561,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/global-products/:globalProductId",
+							"raw": "{{base_url}}/global-products/:globalProductId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1588,7 +1587,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/global-products/:globalProductId/products",
+							"raw": "{{base_url}}/global-products/:globalProductId/products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1625,10 +1624,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Protective Equipment\",\n  \"slug\": \"protective-equipment\",\n  \"productIds\": [],\n  \"isActive\": true\n}"
+							"raw": "{\n  \"name\": \"Protective Equipment\",\n  \"productIds\": [],\n  \"isActive\": true\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/global-products",
+							"raw": "{{base_url}}/global-products",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1660,7 +1659,7 @@
 							"raw": "{\n  \"name\": \"Updated Protective Equipment\",\n  \"isActive\": true\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/global-products/:globalProductId",
+							"raw": "{{base_url}}/global-products/:globalProductId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1691,7 +1690,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/api/global-products/:globalProductId",
+							"raw": "{{base_url}}/global-products/:globalProductId",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1730,7 +1729,7 @@
 							"raw": "{\n  \"globalProductId\": \"{{global_product_id}}\",\n  \"productId\": \"{{product_id}}\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/global-products/add-product",
+							"raw": "{{base_url}}/global-products/add-product",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1763,7 +1762,7 @@
 							"raw": "{\n  \"globalProductId\": \"{{global_product_id}}\",\n  \"productId\": \"{{product_id}}\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/global-products/remove-product",
+							"raw": "{{base_url}}/global-products/remove-product",
 							"host": [
 								"{{base_url}}"
 							],
@@ -1778,12 +1777,320 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Cart Management",
+			"item": [
+				{
+					"name": "Get User Cart",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/cart",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cart"
+							]
+						},
+						"description": "Get authenticated user's cart"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Item to Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"vendorProductId\": \"{{vendorProductId}}\",\n  \"quantity\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cart/items",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cart",
+								"items"
+							]
+						},
+						"description": "Add item to user's cart"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Cart Item",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 3\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cart/items/:itemId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cart",
+								"items",
+								":itemId"
+							],
+							"variable": [
+								{
+									"key": "itemId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update quantity of item in user's cart"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Item from Cart",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/cart/items/:itemId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cart",
+								"items",
+								":itemId"
+							],
+							"variable": [
+								{
+									"key": "itemId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Remove item from user's cart"
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Cart",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/cart",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cart"
+							]
+						},
+						"description": "Clear all items from user's cart"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Wishlist Management",
+			"item": [
+				{
+					"name": "Get User Wishlist",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/wishlist",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wishlist"
+							]
+						},
+						"description": "Get authenticated user's wishlist"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Item to Wishlist",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"vendorProductId\": \"{{vendorProductId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/wishlist/items",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wishlist",
+								"items"
+							]
+						},
+						"description": "Add item to user's wishlist"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Item from Wishlist",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/wishlist/items/:itemId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wishlist",
+								"items",
+								":itemId"
+							],
+							"variable": [
+								{
+									"key": "itemId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Remove item from user's wishlist"
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Wishlist",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/wishlist",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wishlist"
+							]
+						},
+						"description": "Clear all items from user's wishlist"
+					},
+					"response": []
+				},
+				{
+					"name": "Check Item in Wishlist",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/wishlist/check/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wishlist",
+								"check",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Check if an item exists in user's wishlist"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [
 		{
 			"key": "base_url",
-			"value": "http://localhost:3000"
+			"value": "http://localhost:3000/api/v1"
 		},
 		{
 			"key": "user_token",

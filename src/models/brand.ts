@@ -11,7 +11,6 @@ export interface IBrandImage {
 
 export interface IBrand extends Document {
   name: string;
-  slug: string;
   description?: string;
   logo?: IBrandImage; // Brand logo with Cloudinary info
   website?: string;
@@ -28,13 +27,6 @@ const BrandSchema: Schema = new Schema({
     trim: true,
     unique: true,
     maxlength: 100
-  },
-  slug: { 
-    type: String, 
-    required: true, 
-    unique: true,
-    lowercase: true,
-    match: [/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain only lowercase letters, numbers, and hyphens']
   },
   description: { 
     type: String,
@@ -72,7 +64,6 @@ BrandSchema.plugin(aggregatePaginate);
 
 // Index for better query performance
 BrandSchema.index({ name: 'text' });
-BrandSchema.index({ slug: 1 });
 BrandSchema.index({ isActive: 1 });
 
 export default mongoose.model<IBrand>('Brand', BrandSchema);

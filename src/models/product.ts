@@ -11,7 +11,6 @@ export interface IProductImage {
 
 export interface IProduct extends Document {
   name: string;
-  slug: string;
   description?: string;
   category: mongoose.Types.ObjectId; // Reference to Category model
   subCategory?: mongoose.Types.ObjectId; // Reference to Category model (optional)
@@ -35,13 +34,6 @@ const ProductSchema: Schema = new Schema({
     required: true,
     trim: true,
     maxlength: 200
-  },
-  slug: { 
-    type: String, 
-    required: true, 
-    unique: true,
-    lowercase: true,
-    match: [/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain only lowercase letters, numbers, and hyphens']
   },
   description: { 
     type: String,
@@ -96,7 +88,6 @@ ProductSchema.plugin(aggregatePaginate);
 // Index for better query performance
 ProductSchema.index({ name: 'text', description: 'text' });
 ProductSchema.index({ category: 1 });
-ProductSchema.index({ slug: 1 });
 ProductSchema.index({ isActive: 1 });
 ProductSchema.index({ globalProduct: 1 });
 

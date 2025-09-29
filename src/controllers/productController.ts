@@ -55,7 +55,6 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
         $group: {
           _id: '$_id',
           name: { $first: '$name' },
-          slug: { $first: '$slug' },
           description: { $first: '$description' },
           category: { $first: '$category' },
           subCategory: { $first: '$subCategory' },
@@ -104,7 +103,6 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           subCategory: 1,
@@ -188,7 +186,6 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
         $group: {
           _id: '$_id',
           name: { $first: '$name' },
-          slug: { $first: '$slug' },
           description: { $first: '$description' },
           category: { $first: '$category' },
           subCategory: { $first: '$subCategory' },
@@ -237,7 +234,6 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           subCategory: 1,
@@ -321,7 +317,6 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
         $group: {
           _id: '$_id',
           name: { $first: '$name' },
-          slug: { $first: '$slug' },
           description: { $first: '$description' },
           category: { $first: '$category' },
           subCategory: { $first: '$subCategory' },
@@ -370,7 +365,6 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           subCategory: 1,
@@ -468,7 +462,6 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           subCategory: 1,
@@ -546,7 +539,6 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
         $group: {
           _id: '$_id',
           name: { $first: '$name' },
-          slug: { $first: '$slug' },
           description: { $first: '$description' },
           category: { $first: '$category' },
           subCategory: { $first: '$subCategory' },
@@ -595,7 +587,6 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           subCategory: 1,
@@ -674,7 +665,6 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
         $group: {
           _id: '$_id',
           name: { $first: '$name' },
-          slug: { $first: '$slug' },
           description: { $first: '$description' },
           category: { $first: '$category' },
           subCategory: { $first: '$subCategory' },
@@ -723,7 +713,6 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           subCategory: 1,

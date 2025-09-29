@@ -311,7 +311,6 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           brand: 1,
@@ -381,7 +380,6 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           subCategory: 1,
@@ -409,13 +407,13 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 };
 
 // Helper function to handle global product logic
-const handleGlobalProduct = async (product: any, globalProductId?: string, globalProductName?: string) => {
+const handleGlobalProduct = async (product: any, globalProductId?: string, globalProductName?: string, session?: any) => {
   let globalProduct;
   
   if (globalProductId && !product) {
     // Case 1: Global product ID exists but product doesn't exist
     // Create a new product and associate it with the existing global product
-    globalProduct = await GlobalProduct.findById(globalProductId);
+    globalProduct = await GlobalProduct.findById(globalProductId).session(session || undefined);
     if (globalProduct) {
       // Create a new product since it doesn't exist
       // This case should be handled in the main function where product creation happens
@@ -425,50 +423,44 @@ const handleGlobalProduct = async (product: any, globalProductId?: string, globa
   } else if (!globalProductId && product && globalProductName) {
     // Case 2: Product exists but global product ID doesn't exist, global product name is provided
     // Create a new global product and associate it with the existing product
-    const globalProductSlug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    
     globalProduct = new GlobalProduct({
       name: globalProductName,
-      slug: globalProductSlug,
       productIds: [product._id as mongoose.Types.ObjectId],
       isActive: true
     });
     
-    await globalProduct.save();
+    await globalProduct.save({ session });
     
     // Set the global product reference on the product
     product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-    await product.save();
+    await product.save({ session });
   } else if (globalProductId && product) {
     // Case 3: Both global product ID and product exist
     // Associate them if not already associated
-    globalProduct = await GlobalProduct.findById(globalProductId);
+    globalProduct = await GlobalProduct.findById(globalProductId).session(session || undefined);
     if (globalProduct) {
       // Add product to global product if not already there
       const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
       if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
         globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
-        await globalProduct.save();
+        await globalProduct.save({ session });
       }
       // Set the global product reference on the product if not already set
       if (!product.globalProduct) {
         product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-        await product.save();
+        await product.save({ session });
       }
     }
   } else if (!globalProductId && !product && globalProductName) {
     // Case 4: Neither global product ID nor product exist, but global product name is provided
     // Create both new product and new global product
-    const globalProductSlug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    
     globalProduct = new GlobalProduct({
       name: globalProductName,
-      slug: globalProductSlug,
       productIds: [], // Will be populated after product creation
       isActive: true
     });
     
-    await globalProduct.save();
+    await globalProduct.save({ session });
     // Product will be created in the main function and then associated
     return globalProduct;
   }
@@ -478,11 +470,13 @@ const handleGlobalProduct = async (product: any, globalProductId?: string, globa
 
 // Unified function to add products (both new and existing) - for admins
 export const addProduct = async (req: Request, res: Response): Promise<void> => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
   try {
     const { 
       productId, // If provided, it's an existing product
       name, 
-      slug: productSlug, 
       description, 
       category, 
       brand, 
@@ -503,20 +497,26 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
     if (!productId && globalProductId && !globalProductName) {
       // Case 1: Global product ID exists but product ID doesn't exist
       // Create a new product and associate it with the existing global product
-      const globalProduct = await GlobalProduct.findById(globalProductId);
+      const globalProduct = await GlobalProduct.findById(globalProductId).session(session);
       if (!globalProduct) {
+        await session.abortTransaction();
+        session.endSession();
         res.status(404).json({ message: 'Global product not found' });
         return;
       }
       
       // Check if category exists and is active
-      const categoryDoc = await Category.findById(category);
+      const categoryDoc = await Category.findById(category).session(session);
       if (!categoryDoc) {
+        await session.abortTransaction();
+        session.endSession();
         res.status(400).json({ message: 'Category not found' });
         return;
       }
       
       if (!categoryDoc.isActive) {
+        await session.abortTransaction();
+        session.endSession();
         res.status(400).json({ message: 'Cannot create product. Category is not active' });
         return;
       }
@@ -552,7 +552,6 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       // Create new product
       const productData = {
         name,
-        slug: productSlug,
         description,
         category,
         brand,
@@ -563,20 +562,35 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       };
       
       product = new Product(productData);
-      await product.save();
+      await product.save({ session });
       
       // Add product to global product
       const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
       if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
         globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
-        await globalProduct.save();
+        await globalProduct.save({ session });
       }
     } else if (productId && !globalProductId) {
       // Case 2 & 3: Product ID exists but global product ID doesn't exist (Case 2) or both exist (Case 3)
       // Existing product
-      product = await Product.findById(productId);
+      product = await Product.findById(productId).session(session);
       if (!product) {
+        await session.abortTransaction();
+        session.endSession();
         res.status(404).json({ message: 'Product not found' });
+        return;
+      }
+      
+      // Check if admin already has this product
+      const existingVendorProduct = await VendorProduct.findOne({
+        productId: productId,
+        vendorId: req.user?.id
+      }).session(session);
+      
+      if (existingVendorProduct) {
+        await session.abortTransaction();
+        session.endSession();
+        res.status(400).json({ message: 'You have already added this product' });
         return;
       }
       
@@ -584,130 +598,55 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       if (globalProductName) {
         // Case 2: Product exists but global product ID doesn't exist, global product name is provided
         // Create a new global product and associate it with the existing product
-        const globalProductSlug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-        
         const globalProduct = new GlobalProduct({
           name: globalProductName,
-          slug: globalProductSlug,
           productIds: [product._id as mongoose.Types.ObjectId],
           isActive: true
         });
         
-        await globalProduct.save();
+        await globalProduct.save({ session });
         
         // Set the global product reference on the product
         product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-        await product.save();
+        await product.save({ session });
       } else if (globalProductId) {
         // Case 3: Both global product ID and product exist
         // Associate them if not already associated
-        const globalProduct = await GlobalProduct.findById(globalProductId);
+        const globalProduct = await GlobalProduct.findById(globalProductId).session(session);
         if (globalProduct) {
           // Add product to global product if not already there
           const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
           if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
             globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
-            await globalProduct.save();
+            await globalProduct.save({ session });
           }
           // Set the global product reference on the product if not already set
           if (!product.globalProduct) {
             product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-            await product.save();
+            await product.save({ session });
           }
         }
       }
     } else if (!productId && !globalProductId && globalProductName) {
       // Case 4: Neither global product ID nor product ID exist, but global product name is provided
-      // Create both new product and new global product
-      // Check if category exists and is active
-      const categoryDoc = await Category.findById(category);
-      if (!categoryDoc) {
-        res.status(400).json({ message: 'Category not found' });
-        return;
-      }
+      // Check if a global product with this name already exists
+      let globalProduct = await GlobalProduct.findOne({ name: globalProductName }).session(session);
       
-      if (!categoryDoc.isActive) {
-        res.status(400).json({ message: 'Cannot create product. Category is not active' });
-        return;
-      }
-      
-      // Process images to match the required format
-      let processedImages = [];
-      if (images) {
-        if (Array.isArray(images)) {
-          // If images is already an array, check if it contains objects or strings
-          processedImages = images.map((img: any) => {
-            if (typeof img === 'string') {
-              // If it's a string, convert it to the required object format
-              return {
-                url: img,
-                publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-                alt: name || 'Product image'
-              };
-            } else {
-              // If it's already an object, use it as is
-              return img;
-            }
-          });
-        } else if (typeof images === 'string') {
-          // If images is a string, convert it to the required format
-          processedImages = [{
-            url: images,
-            publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-            alt: name || 'Product image'
-          }];
-        }
-      }
-      
-      // Create new product
-      const productData = {
-        name,
-        slug: productSlug,
-        description,
-        category,
-        brand,
-        images: processedImages,
-        tags,
-        isActive: true
-      };
-      
-      product = new Product(productData);
-      await product.save();
-      
-      // Create new global product
-      const globalProductSlug = globalProductName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-      
-      const globalProduct = new GlobalProduct({
-        name: globalProductName,
-        slug: globalProductSlug,
-        productIds: [product._id as mongoose.Types.ObjectId],
-        isActive: true
-      });
-      
-      await globalProduct.save();
-      
-      // Set the global product reference on the product
-      product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-      await product.save();
-    } else {
-      // Default case: productId provided or no global product information provided
-      if (productId) {
-        // Existing product
-        product = await Product.findById(productId);
-        if (!product) {
-          res.status(404).json({ message: 'Product not found' });
-          return;
-        }
-      } else {
-        // New product
+      if (globalProduct) {
+        // Global product already exists, use it instead of creating a new one
+        // Create new product
         // Check if category exists and is active
-        const categoryDoc = await Category.findById(category);
+        const categoryDoc = await Category.findById(category).session(session);
         if (!categoryDoc) {
+          await session.abortTransaction();
+          session.endSession();
           res.status(400).json({ message: 'Category not found' });
           return;
         }
         
         if (!categoryDoc.isActive) {
+          await session.abortTransaction();
+          session.endSession();
           res.status(400).json({ message: 'Cannot create product. Category is not active' });
           return;
         }
@@ -743,7 +682,6 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         // Create new product
         const productData = {
           name,
-          slug: productSlug,
           description,
           category,
           brand,
@@ -753,15 +691,212 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         };
         
         product = new Product(productData);
-        await product.save();
+        await product.save({ session });
+        
+        // Add product to existing global product
+        const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
+        if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
+          globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
+          await globalProduct.save({ session });
+        }
+        
+        // Set the global product reference on the product
+        product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
+        await product.save({ session });
+      } else {
+        // Global product doesn't exist, create both new product and new global product
+        // Check if category exists and is active
+        const categoryDoc = await Category.findById(category).session(session);
+        if (!categoryDoc) {
+          await session.abortTransaction();
+          session.endSession();
+          res.status(400).json({ message: 'Category not found' });
+          return;
+        }
+        
+        if (!categoryDoc.isActive) {
+          await session.abortTransaction();
+          session.endSession();
+          res.status(400).json({ message: 'Cannot create product. Category is not active' });
+          return;
+        }
+        
+        // Process images to match the required format
+        let processedImages = [];
+        if (images) {
+          if (Array.isArray(images)) {
+            // If images is already an array, check if it contains objects or strings
+            processedImages = images.map((img: any) => {
+              if (typeof img === 'string') {
+                // If it's a string, convert it to the required object format
+                return {
+                  url: img,
+                  publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+                  alt: name || 'Product image'
+                };
+              } else {
+                // If it's already an object, use it as is
+                return img;
+              }
+            });
+          } else if (typeof images === 'string') {
+            // If images is a string, convert it to the required format
+            processedImages = [{
+              url: images,
+              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+              alt: name || 'Product image'
+            }];
+          }
+        }
+        
+        // Create new product
+        const productData = {
+          name,
+          description,
+          category,
+          brand,
+          images: processedImages,
+          tags,
+          isActive: true
+        };
+        
+        product = new Product(productData);
+        await product.save({ session });
+        
+        // Create new global product
+        globalProduct = new GlobalProduct({
+          name: globalProductName,
+          productIds: [product._id as mongoose.Types.ObjectId],
+          isActive: true
+        });
+        
+        await globalProduct.save({ session });
+        
+        // Set the global product reference on the product
+        product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
+        await product.save({ session });
+      }
+    } else {
+      // Default case: productId provided or no global product information provided
+      if (productId) {
+        // Existing product
+        product = await Product.findById(productId).session(session);
+        if (!product) {
+          await session.abortTransaction();
+          session.endSession();
+          res.status(404).json({ message: 'Product not found' });
+          return;
+        }
+        
+        // Check if admin already has this product
+        const existingVendorProduct = await VendorProduct.findOne({
+          productId: productId,
+          vendorId: req.user?.id
+        }).session(session);
+        
+        if (existingVendorProduct) {
+          await session.abortTransaction();
+          session.endSession();
+          res.status(400).json({ message: 'You have already added this product' });
+          return;
+        }
+      } else {
+        // New product
+        // Check if category exists and is active
+        const categoryDoc = await Category.findById(category).session(session);
+        if (!categoryDoc) {
+          await session.abortTransaction();
+          session.endSession();
+          res.status(400).json({ message: 'Category not found' });
+          return;
+        }
+        
+        if (!categoryDoc.isActive) {
+          await session.abortTransaction();
+          session.endSession();
+          res.status(400).json({ message: 'Cannot create product. Category is not active' });
+          return;
+        }
+        
+        // Process images to match the required format
+        let processedImages = [];
+        if (images) {
+          if (Array.isArray(images)) {
+            // If images is already an array, check if it contains objects or strings
+            processedImages = images.map((img: any) => {
+              if (typeof img === 'string') {
+                // If it's a string, convert it to the required object format
+                return {
+                  url: img,
+                  publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+                  alt: name || 'Product image'
+                };
+              } else {
+                // If it's already an object, use it as is
+                return img;
+              }
+            });
+          } else if (typeof images === 'string') {
+            // If images is a string, convert it to the required format
+            processedImages = [{
+              url: images,
+              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
+              alt: name || 'Product image'
+            }];
+          }
+        }
+        
+        // Create new product
+        const productData = {
+          name,
+          description,
+          category,
+          brand,
+          images: processedImages,
+          tags,
+          isActive: true
+        };
+        
+        product = new Product(productData);
+        await product.save({ session });
       }
       
       // Handle global product logic
       const globalProduct = await handleGlobalProduct(
         product, 
         globalProductId, 
-        globalProductName
+        globalProductName,
+        session
       );
+    }
+    
+    // For Case 1 (globalProductId provided but no productId), we don't need to check for duplicates
+    // since we're creating a new product each time
+    let shouldCheckDuplicate = true;
+    if (!productId && globalProductId && !globalProductName) {
+      shouldCheckDuplicate = false;
+    }
+    
+    // Also check for Case 4 (neither productId nor globalProductId provided, but globalProductName is)
+    // In this case, we should still check for duplicates
+    if (!productId && !globalProductId && globalProductName) {
+      // For Case 4, we still need to check if admin already has this product
+      shouldCheckDuplicate = true;
+    }
+    
+    if (shouldCheckDuplicate) {
+      // Check if admin already has this product (for cases other than Case 1)
+      const existingVendorProduct = await VendorProduct.findOne({
+        productId: product._id,
+        vendorId: req.user?.id
+      }).session(session);
+      
+      if (existingVendorProduct) {
+        await session.abortTransaction();
+        session.endSession();
+        res.status(400).json({ message: 'You have already added this product' });
+        return;
+      }
     }
     
     // Create vendor product with approved status since admin is adding it
@@ -776,7 +911,11 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       shippingInfo: shippingInfo
     });
     
-    await vendorProduct.save();
+    await vendorProduct.save({ session });
+    
+    // If we reach here, everything was successful, so commit the transaction
+    await session.commitTransaction();
+    session.endSession();
     
     res.status(201).json({ 
       message: 'Product added successfully.', 
@@ -784,6 +923,10 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       vendorProduct 
     });
   } catch (error: any) {
+    // If any error occurs, abort the transaction
+    await session.abortTransaction();
+    session.endSession();
+    
     // Handle duplicate key error (E11000)
     if (error.code === 11000) {
       // Extract the duplicate key fields from the error
@@ -798,7 +941,10 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         errorMessage = 'This product is already added for this vendor.';
       } else if (duplicateFields.includes('sku')) {
         errorMessage = `A product with SKU '${duplicateValues.sku}' already exists.`;
-      } 
+      } else if (duplicateFields.includes('name')) {
+        // Check if it's a global product name conflict
+        errorMessage = `A global product with this name already exists.`;
+      }
       
       res.status(409).json({ 
         message: errorMessage,

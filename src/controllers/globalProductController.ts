@@ -19,8 +19,7 @@ export const getGlobalProducts = async (req: Request, res: Response): Promise<vo
     
     if (search) {
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { slug: { $regex: search, $options: 'i' } }
+        { name: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -31,7 +30,6 @@ export const getGlobalProducts = async (req: Request, res: Response): Promise<vo
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           productIds: 1,
           isActive: 1,
           createdAt: 1,
@@ -77,7 +75,6 @@ export const createGlobalProduct = async (req: Request, res: Response): Promise<
     // Create global product
     const globalProduct = new GlobalProduct({
       name: req.body.name,
-      slug: req.body.slug,
       productIds: req.body.productIds || [],
       isActive: req.body.isActive !== undefined ? req.body.isActive : true
     });
@@ -93,9 +90,7 @@ export const createGlobalProduct = async (req: Request, res: Response): Promise<
       
       let errorMessage = 'Global product already exists with these details.';
       
-      if (duplicateFields.includes('slug')) {
-        errorMessage = `A global product with slug '${duplicateValues.slug}' already exists.`;
-      } else if (duplicateFields.includes('name')) {
+      if (duplicateFields.includes('name')) {
         errorMessage = `A global product with name '${duplicateValues.name}' already exists.`;
       }
       
@@ -129,9 +124,7 @@ export const updateGlobalProduct = async (req: Request, res: Response): Promise<
       
       let errorMessage = 'Global product already exists with these details.';
       
-      if (duplicateFields.includes('slug')) {
-        errorMessage = `A global product with slug '${duplicateValues.slug}' already exists.`;
-      } else if (duplicateFields.includes('name')) {
+      if (duplicateFields.includes('name')) {
         errorMessage = `A global product with name '${duplicateValues.name}' already exists.`;
       }
       
@@ -297,7 +290,6 @@ export const getProductsByGlobalProduct = async (req: Request, res: Response): P
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           subCategory: 1,

@@ -4,7 +4,6 @@ import aggregatePaginate from 'mongoose-aggregate-paginate-v2';
 
 export interface IGlobalProduct extends Document {
   name: string;
-  slug: string;
   productIds: mongoose.Types.ObjectId[]; // Array of product IDs that belong to this global product
   isActive: boolean;
   createdAt: Date;
@@ -24,13 +23,6 @@ const GlobalProductSchema: Schema = new Schema({
     maxlength: 200,
     unique: true
   },
-  slug: { 
-    type: String, 
-    required: true, 
-    unique: true,
-    lowercase: true,
-    match: [/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must contain only lowercase letters, numbers, and hyphens']
-  },
   productIds: [{ 
     type: Schema.Types.ObjectId, 
     ref: 'Product'
@@ -49,7 +41,6 @@ GlobalProductSchema.plugin(aggregatePaginate);
 
 // Index for better query performance
 GlobalProductSchema.index({ name: 1 });
-GlobalProductSchema.index({ slug: 1 });
 GlobalProductSchema.index({ isActive: 1 });
 
 const GlobalProduct = mongoose.model<IGlobalProduct, IGlobalProductModel>('GlobalProduct', GlobalProductSchema);

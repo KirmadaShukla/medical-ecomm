@@ -62,7 +62,6 @@ export const searchGlobalProductsForVendor = async (req: Request, res: Response)
         $project: {
           _id: 1,
           name: 1,
-          slug: 1,
           description: 1,
           category: 1,
           subCategory: 1,
