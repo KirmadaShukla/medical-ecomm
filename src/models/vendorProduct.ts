@@ -14,19 +14,10 @@ export interface IVendorProduct extends Document {
   vendorId: mongoose.Types.ObjectId; // Reference to Vendor
   globalProductId?: mongoose.Types.ObjectId; // Reference to GlobalProduct
   price: number;
-  comparePrice?: number; // Original price for discount calculation
   stock: number;
-  reservedStock: number; // Stock reserved in pending orders
-  soldQuantity: number; // Total quantity sold
   sku: string; // Vendor-specific SKU
   status: 'pending' | 'approved' | 'rejected';
   isFeatured: boolean;
-  discountPercentage?: number;
-  shippingInfo?: {
-    freeShipping: boolean;
-  };
-  discountAmount?: number; // Virtual field
-  isOnSale?: boolean; // Virtual field
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,25 +48,11 @@ const VendorProductSchema: Schema = new Schema({
     min: 0,
     default: 0
   },
-  comparePrice: { 
-    type: Number,
-    min: 0
-  },
   stock: { 
     type: Number, 
     required: true,
     min: 0,
     default: 0
-  },
-  reservedStock: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  soldQuantity: {
-    type: Number,
-    default: 0,
-    min: 0
   },
   sku: { 
     type: String, 
@@ -96,17 +73,6 @@ const VendorProductSchema: Schema = new Schema({
   isFeatured: {
     type: Boolean,
     default: false
-  },
-  discountPercentage: {
-    type: Number,
-    min: 0,
-    max: 100
-  },
-  shippingInfo: {
-    freeShipping: {
-      type: Boolean,
-      default: false
-    }
   }
 }, {
   timestamps: true
@@ -122,24 +88,6 @@ VendorProductSchema.index({ sku: 1 });
 VendorProductSchema.index({ status: 1 });
 VendorProductSchema.index({ vendorId: 1, isFeatured: 1 });
 VendorProductSchema.index({ globalProductId: 1 });
-
-// Virtual for calculating discount amount
-VendorProductSchema.virtual('discountAmount').get(function(this: IVendorProduct) {
-  if (this.comparePrice && this.comparePrice > this.price) {
-    return this.comparePrice - this.price;
-  }
-  return 0;
-});
-
-// Virtual for checking if product is on sale
-VendorProductSchema.virtual('isOnSale').get(function(this: IVendorProduct) {
-  return this.comparePrice && this.comparePrice > this.price;
-});
-
-// Ensure virtual fields are serialized
-VendorProductSchema.set('toJSON', {
-  virtuals: true
-});
 
 const VendorProduct = mongoose.model<IVendorProduct, IVendorProductModel>('VendorProduct', VendorProductSchema);
 export default VendorProduct;

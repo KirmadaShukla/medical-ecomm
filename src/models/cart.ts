@@ -23,6 +23,7 @@ const CartSchema: Schema<ICart> = new Schema({
     unique: true
   },
   items: [{
+    _id: false,
     vendorProductId: { 
       type: Schema.Types.ObjectId, 
       ref: 'VendorProduct',

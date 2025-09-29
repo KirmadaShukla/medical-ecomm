@@ -230,14 +230,11 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       images,
       tags,
       price, 
-      comparePrice, 
       stock, 
       sku, 
-      shippingInfo, 
       globalProductId, 
       globalProductName,
-      isFeatured,
-      discountPercentage
+      isFeatured
     } = req.body;
     
     let product;
@@ -655,14 +652,10 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       productId: product._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated user ID
       price: price || 0, // Default to 0 if not provided
-      comparePrice: comparePrice,
       stock: stock || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
       status: 'pending', // Pending approval for both new and existing products
-      isFeatured: isFeatured || false,
-      discountPercentage: discountPercentage,
-      shippingInfo: shippingInfo,
-      images: productId ? undefined : processedImages // Only set images for new products
+      isFeatured: isFeatured || false
     });
     
     await vendorProduct.save({ session });
@@ -772,17 +765,10 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
           productId: 1,
           vendorId: 1,
           price: 1,
-          comparePrice: 1,
           stock: 1,
-          reservedStock: 1,
-          soldQuantity: 1,
           sku: 1,
           status: 1,
           isFeatured: 1,
-          discountPercentage: 1,
-          shippingInfo: 1,
-          discountAmount: 1,
-          isOnSale: 1,
           createdAt: 1,
           updatedAt: 1,
           productDetails: {

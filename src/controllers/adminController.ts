@@ -488,14 +488,13 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       name, 
       description, 
       category, 
+      subCategory, 
       brand, 
-      images, 
+      images,
       tags,
       price, 
-      comparePrice, 
       stock, 
       sku, 
-      shippingInfo, 
       globalProductId, 
       globalProductName 
     } = req.body;
@@ -913,11 +912,9 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       productId: product._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated admin ID
       price: price || 0, // Default to 0 if not provided
-      comparePrice: comparePrice,
       stock: stock || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
-      status: 'approved', // Approved by default since admin is adding it
-      shippingInfo: shippingInfo
+      status: 'approved' // Approved by default since admin is adding it
     });
     
     await vendorProduct.save({ session });

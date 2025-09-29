@@ -1008,7 +1008,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Face Mask\",\n  \"description\": \"Disposable face mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/mask.jpg\"],\n  \"tags\": [\"mask\", \"disposable\", \"medical\"],\n  \"price\": 5.99,\n  \"comparePrice\": 7.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Protective Masks\"\n}"
+							"raw": "{\n  \"name\": \"Face Mask\",\n  \"description\": \"Disposable face mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/mask.jpg\"],\n  \"tags\": [\"mask\", \"disposable\", \"medical\"],\n  \"price\": 5.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"globalProductName\": \"Protective Masks\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/admin/products",
@@ -1041,7 +1041,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n}"
+							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"globalProductId\": \"{{global_product_id}}\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/admin/products",
@@ -1074,7 +1074,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Protective Masks\"\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
+							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"globalProductName\": \"Protective Masks\"\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/admin/products",
@@ -1179,7 +1179,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"N95 Mask\",\n  \"description\": \"N95 protective mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/n95.jpg\"],\n  \"tags\": [\"mask\", \"n95\", \"medical\"],\n  \"price\": 7.99,\n  \"comparePrice\": 9.99,\n  \"stock\": 50,\n  \"sku\": \"N95-001\",\n  \"shippingInfo\": {\n    \"weight\": 0.3,\n    \"dimensions\": {\n      \"length\": 8,\n      \"width\": 6,\n      \"height\": 2\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n  // Case 1: Global product ID exists but product ID doesn't exist\n}"
+							"raw": "{\n  \"name\": \"N95 Mask\",\n  \"description\": \"N95 protective mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/n95.jpg\"],\n  \"tags\": [\"mask\", \"n95\", \"medical\"],\n  \"price\": 7.99,\n  \"stock\": 50,\n  \"sku\": \"N95-001\",\n  \"globalProductId\": \"{{global_product_id}}\"\n  // Case 1: Global product ID exists but product ID doesn't exist\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/admin/products",
@@ -1318,7 +1318,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Hand Sanitizer\",\n  \"description\": \"Alcohol-based hand sanitizer\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/sanitizer.jpg\"],\n  \"tags\": [\"sanitizer\", \"alcohol\", \"hand\"],\n  \"isActive\": true,\n  \"price\": 5.99,\n  \"comparePrice\": 7.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"isFeatured\": false,\n  \"discountPercentage\": 0,\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Sanitizers\"\n}"
+							"raw": "{\n  \"name\": \"Hand Sanitizer\",\n  \"description\": \"Alcohol-based hand sanitizer\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/sanitizer.jpg\"],\n  \"tags\": [\"sanitizer\", \"alcohol\", \"hand\"],\n  \"isActive\": true,\n  \"price\": 5.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"isFeatured\": false,\n  \"globalProductName\": \"Sanitizers\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/vendors/products",
@@ -1384,7 +1384,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Protective Masks\"\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
+							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"globalProductName\": \"Protective Masks\"\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/vendors/products",

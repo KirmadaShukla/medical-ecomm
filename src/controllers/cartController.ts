@@ -100,7 +100,7 @@ export const addItemToCart = catchAsyncError(async (req: Request, res: Response,
 
 // Update item quantity in cart
 export const updateCartItem = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { itemId } = req.params;
+  const { vendorProductId } = req.params;
   const { quantity } = req.body;
 
   // Validate input
@@ -119,9 +119,9 @@ export const updateCartItem = catchAsyncError(async (req: Request, res: Response
     return next(new AppError('Cart not found', 404));
   }
 
-  // Find item in cart
+  // Find item in cart using vendorProductId
   const itemIndex = cart.items.findIndex(
-    item => item._id && item._id.toString() === itemId
+    item => item.vendorProductId.toString() === vendorProductId
   );
 
   if (itemIndex === -1) {
@@ -161,7 +161,7 @@ export const updateCartItem = catchAsyncError(async (req: Request, res: Response
 
 // Remove item from cart
 export const removeItemFromCart = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { itemId } = req.params;
+  const { vendorProductId } = req.params;
 
   // Find cart for user
   const cart = await Cart.findOne({ userId: req.user._id });
@@ -170,9 +170,9 @@ export const removeItemFromCart = catchAsyncError(async (req: Request, res: Resp
     return next(new AppError('Cart not found', 404));
   }
 
-  // Find item in cart
+  // Find item in cart using vendorProductId
   const itemIndex = cart.items.findIndex(
-    item => item._id && item._id.toString() === itemId
+    item => item.vendorProductId.toString() === vendorProductId
   );
 
   if (itemIndex === -1) {
