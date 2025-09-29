@@ -312,15 +312,19 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
           _id: 1,
           name: 1,
           description: 1,
-          category: 1,
-          brand: 1,
           images: 1,
           tags: 1,
           isActive: 1,
           createdAt: 1,
           updatedAt: 1,
-          categoryDetails: 1,
-          brandDetails: 1
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       }
     ];
@@ -342,10 +346,11 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
 
 export const getProductById = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('getProductById',req.params.id);
     const product = await Product.aggregate([
       {
         $match: {
-          _id: req.params.id
+          _id: new mongoose.Types.ObjectId(req.params.id)
         }
       },
       {
@@ -381,20 +386,24 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
           _id: 1,
           name: 1,
           description: 1,
-          category: 1,
           subCategory: 1,
-          brand: 1,
           images: 1,
           tags: 1,
           isActive: 1,
           createdAt: 1,
           updatedAt: 1,
-          categoryDetails: 1,
-          brandDetails: 1
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       }
     ]);
-    
+    console.log(product);
     if (!product || product.length === 0) {
       res.status(404).json({ message: 'Product not found' });
       return;
@@ -631,7 +640,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       // Case 4: Neither global product ID nor product ID exist, but global product name is provided
       // Check if a global product with this name already exists
       let globalProduct = await GlobalProduct.findOne({ name: globalProductName }).session(session);
-      
+      console.log("case 4 runned")
       if (globalProduct) {
         // Global product already exists, use it instead of creating a new one
         // Create new product
@@ -979,17 +988,17 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
 
 export const deleteProduct = async (req: Request, res: Response): Promise<void> => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const vendorProduct = await VendorProduct.findOneAndDelete({
+      _id: req.params.id,
+      vendorId: req.user._id
+    });
     
-    if (!product) {
-      res.status(404).json({ message: 'Product not found' });
+    if (!vendorProduct) {
+      res.status(404).json({ message: 'Product not found or you do not have permission to delete it' });
       return;
     }
     
-    // Also delete associated vendor products
-    await VendorProduct.deleteMany({ productId: req.params.id });
-    
-    res.status(200).json({ message: 'Product and associated vendor products deleted successfully' });
+    res.status(200).json({ message: 'Product deleted successfully from your inventory only. Other vendors products remain unaffected.' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting product', error });
   }
@@ -1079,6 +1088,34 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
         $unwind: '$vendorDetails'
       },
       {
+        $lookup: {
+          from: 'categories',
+          localField: 'productDetails.category',
+          foreignField: '_id',
+          as: 'categoryDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$categoryDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'brands',
+          localField: 'productDetails.brand',
+          foreignField: '_id',
+          as: 'brandDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$brandDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
         $project: {
           _id: 1,
           productId: 1,
@@ -1098,8 +1135,33 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
           isOnSale: 1,
           createdAt: 1,
           updatedAt: 1,
-          product: '$productDetails',
-          vendor: '$vendorDetails'
+          productDetails: {
+            _id: 1,
+            name: 1,
+            description: 1,
+            images: 1,
+            tags: 1,
+            isActive: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            categoryDetails: {
+              _id: 1,
+              name: 1
+            },
+            brandDetails: {
+              _id: 1,
+              name: 1
+            }
+          },
+          vendorDetails: 1,
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       }
     ]);

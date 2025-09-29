@@ -3,7 +3,7 @@ import Product from '../models/product';
 import Category from '../models/category';
 import Brand from '../models/brand';
 import VendorProduct from '../models/vendorProduct';
-import { Aggregate } from 'mongoose';
+import { Types } from 'mongoose';
 
 // Get all products with filters and aggregation
 export const getAllProducts = async (req: Request, res: Response): Promise<void> => {
@@ -119,8 +119,14 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
           vendorProducts: {
             $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
           },
-          categoryDetails: 1,
-          brandDetails: 1
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       },
       {
@@ -250,8 +256,14 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
           vendorProducts: {
             $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
           },
-          categoryDetails: 1,
-          brandDetails: 1
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       },
       {
@@ -381,8 +393,14 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
           vendorProducts: {
             $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
           },
-          categoryDetails: 1,
-          brandDetails: 1
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       },
       {
@@ -413,7 +431,7 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
     const product = await Product.aggregate([
       {
         $match: {
-          _id: productId,
+          _id: new Types.ObjectId(productId),
           isActive: true
         }
       },
@@ -472,8 +490,14 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
           createdAt: 1,
           updatedAt: 1,
           vendorProducts: 1,
-          categoryDetails: 1,
-          brandDetails: 1
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       }
     ]);
@@ -603,8 +627,14 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
           vendorProducts: {
             $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
           },
-          categoryDetails: 1,
-          brandDetails: 1
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       },
       {
@@ -729,8 +759,14 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
           vendorProducts: {
             $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
           },
-          categoryDetails: 1,
-          brandDetails: 1
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       },
       {

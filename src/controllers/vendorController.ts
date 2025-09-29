@@ -785,9 +785,32 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
           isOnSale: 1,
           createdAt: 1,
           updatedAt: 1,
-          product: '$productDetails',
-          category: '$categoryDetails',
-          brand: '$brandDetails'
+          productDetails: {
+            _id: 1,
+            name: 1,
+            description: 1,
+            images: 1,
+            tags: 1,
+            isActive: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            categoryDetails: {
+              _id: 1,
+              name: 1
+            },
+            brandDetails: {
+              _id: 1,
+              name: 1
+            }
+          },
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       },
       {

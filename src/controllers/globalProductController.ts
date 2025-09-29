@@ -291,17 +291,19 @@ export const getProductsByGlobalProduct = async (req: Request, res: Response): P
           _id: 1,
           name: 1,
           description: 1,
-          category: 1,
-          subCategory: 1,
-          brand: 1,
-          globalProduct: 1,
           images: 1,
           tags: 1,
           isActive: 1,
           createdAt: 1,
           updatedAt: 1,
-          categoryDetails: 1,
-          brandDetails: 1
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
         }
       }
     ];
