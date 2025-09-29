@@ -22,6 +22,7 @@ import {
   addProduct, // Using the unified function instead of separate createProduct and addExistingProduct
   updateProduct,
   deleteProduct,
+  deleteProductImage,
   // Vendor product routes
   getVendorProducts,
   updateVendorProductStatus,
@@ -57,6 +58,7 @@ router.get('/products/:id', isAuthenticated, isAdmin, getProductById);
 router.post('/products', isAuthenticated, isAdmin, addProduct); // Using the unified function
 router.put('/products/:id', isAuthenticated, isAdmin, updateProduct);
 router.delete('/products/:id', isAuthenticated, isAdmin, deleteProduct);
+router.delete('/products/:productId/images/:imagePublicId', isAuthenticated, isAdmin, deleteProductImage);
 
 // Vendor product routes
 router.get('/vendor-products', isAuthenticated, isAdmin, getVendorProducts);

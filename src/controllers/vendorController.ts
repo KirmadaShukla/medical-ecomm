@@ -7,6 +7,7 @@ import User from '../models/User';
 import Vendor from '../models/vendors';
 import GlobalProduct from '../models/globalProduct';
 import { generateVendorToken } from '../utils/tokenUtils';
+import { uploadProductImages } from '../utils/cloudinary';
 
 // ==================== VENDOR REGISTRATION ====================
 
@@ -227,7 +228,6 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       category, 
       subCategory, 
       brand, 
-      images,
       tags,
       price, 
       stock, 
@@ -238,7 +238,38 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
     } = req.body;
     
     let product;
-    let processedImages = []; // Define processedImages at the top scope
+    let processedImages: { url: string; publicId: string; alt?: string }[] = [];
+    
+    // Handle image uploads if files are provided
+    if (req.files && req.files.images) {
+      // Handle both single file and multiple files
+      let filesArray = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
+      
+      // Upload images to Cloudinary with vendorId and temporary productId
+      processedImages = await uploadProductImages(filesArray, req.user?._id, 'temp');
+    } else if (req.body.images) {
+      // Handle existing image URLs
+      const images = req.body.images;
+      if (Array.isArray(images)) {
+        processedImages = images.map((img: any) => {
+          if (typeof img === 'string') {
+            return {
+              url: img,
+              publicId: 'default_public_id',
+              alt: name || 'Product image'
+            };
+          } else {
+            return img;
+          }
+        });
+      } else if (typeof images === 'string') {
+        processedImages = [{
+          url: images,
+          publicId: 'default_public_id',
+          alt: name || 'Product image'
+        }];
+      }
+    }
     
     // Handle all 4 cases for global product and product association
     if (!productId && globalProductId && !globalProductName) {
@@ -266,33 +297,6 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         session.endSession();
         res.status(400).json({ message: 'Cannot create product. Category is not active' });
         return;
-      }
-      
-      // Process images to match the required format
-      if (images) {
-        if (Array.isArray(images)) {
-          // If images is already an array, check if it contains objects or strings
-          processedImages = images.map((img: any) => {
-            if (typeof img === 'string') {
-              // If it's a string, convert it to the required object format
-              return {
-                url: img,
-                publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-                alt: name || 'Product image'
-              };
-            } else {
-              // If it's already an object, use it as is
-              return img;
-            }
-          });
-        } else if (typeof images === 'string') {
-          // If images is a string, convert it to the required format
-          processedImages = [{
-            url: images,
-            publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-            alt: name || 'Product image'
-          }];
-        }
       }
       
       // Create new product
@@ -397,34 +401,6 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
           return;
         }
         
-        // Process images to match the required format
-        let processedImages = [];
-        if (images) {
-          if (Array.isArray(images)) {
-            // If images is already an array, check if it contains objects or strings
-            processedImages = images.map((img: any) => {
-              if (typeof img === 'string') {
-                // If it's a string, convert it to the required object format
-                return {
-                  url: img,
-                  publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-                  alt: name || 'Product image'
-                };
-              } else {
-                // If it's already an object, use it as is
-                return img;
-              }
-            });
-          } else if (typeof images === 'string') {
-            // If images is a string, convert it to the required format
-            processedImages = [{
-              url: images,
-              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-              alt: name || 'Product image'
-            }];
-          }
-        }
-        
         // Create new product
         const productData = {
           name,
@@ -451,7 +427,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
         await product.save({ session });
       } else {
-        // Global product doesn't exist, create both new product and new global product
+        // Create new global product
         // Check if category exists and is active
         const categoryDoc = await Category.findById(category).session(session);
         if (!categoryDoc) {
@@ -468,35 +444,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
           return;
         }
         
-        // Process images to match the required format
-        let processedImages = [];
-        if (images) {
-          if (Array.isArray(images)) {
-            // If images is already an array, check if it contains objects or strings
-            processedImages = images.map((img: any) => {
-              if (typeof img === 'string') {
-                // If it's a string, convert it to the required object format
-                return {
-                  url: img,
-                  publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-                  alt: name || 'Product image'
-                };
-              } else {
-                // If it's already an object, use it as is
-                return img;
-              }
-            });
-          } else if (typeof images === 'string') {
-            // If images is a string, convert it to the required format
-            processedImages = [{
-              url: images,
-              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-              alt: name || 'Product image'
-            }];
-          }
-        }
-        
-        // Create new product
+        // Create new product first
         const productData = {
           name,
           description,
@@ -524,116 +472,22 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
         await product.save({ session });
       }
-    } else {
-      // Default case: productId provided or no global product information provided
-      if (productId) {
-        // Existing product
-        product = await Product.findById(productId).session(session);
-        if (!product) {
-          await session.abortTransaction();
-          session.endSession();
-          res.status(404).json({ message: 'Product not found' });
-          return;
-        }
-        
-        // Check if vendor already has this product
-        const existingVendorProduct = await VendorProduct.findOne({
-          productId: productId,
-          vendorId: req.user?.id
-        }).session(session);
-        
-        if (existingVendorProduct) {
-          await session.abortTransaction();
-          session.endSession();
-          res.status(400).json({ message: 'You have already added this product' });
-          return;
-        }
-      } else {
-        // New product
-        // Check if category exists and is active
-        const categoryDoc = await Category.findById(category).session(session);
-        if (!categoryDoc) {
-          await session.abortTransaction();
-          session.endSession();
-          res.status(400).json({ message: 'Category not found' });
-          return;
-        }
-        
-        if (!categoryDoc.isActive) {
-          await session.abortTransaction();
-          session.endSession();
-          res.status(400).json({ message: 'Cannot create product. Category is not active' });
-          return;
-        }
-        
-        // Process images to match the required format
-        if (images) {
-          if (Array.isArray(images)) {
-            // If images is already an array, check if it contains objects or strings
-            processedImages = images.map((img: any) => {
-              if (typeof img === 'string') {
-                // If it's a string, convert it to the required object format
-                return {
-                  url: img,
-                  publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-                  alt: name || 'Product image'
-                };
-              } else {
-                // If it's already an object, use it as is
-                return img;
-              }
-            });
-          } else if (typeof images === 'string') {
-            // If images is a string, convert it to the required format
-            processedImages = [{
-              url: images,
-              publicId: 'default_public_id', // This should be replaced with actual Cloudinary public ID
-              alt: name || 'Product image'
-            }];
-          }
-        }
-        
-        // Create new product
-        const productData = {
-          name,
-          description,
-          category,
-          subCategory,
-          brand,
-          images: processedImages,
-          tags,
-          isActive: true
-        };
-        
-        product = new Product(productData);
-        await product.save({ session });
-      }
-      
-      // Handle global product association
-      await handleGlobalProduct(
-        product, 
-        globalProductId, 
-        globalProductName,
-        session
-      );
     }
     
-    // For Case 1 (globalProductId provided but no productId), we don't need to check for duplicates
-    // since we're creating a new product each time
-    let shouldCheckDuplicate = true;
+    // Check if we need to prevent duplicate vendor products
+    let shouldCheckDuplicate = false;
     if (!productId && globalProductId && !globalProductName) {
-      shouldCheckDuplicate = false;
-    }
-    
-    // Also check for Case 4 (neither productId nor globalProductId provided, but globalProductName is)
-    // In this case, we should still check for duplicates
-    if (!productId && !globalProductId && globalProductName) {
-      // For Case 4, we still need to check if vendor already has this product
+      // For Case 1, we still need to check if admin already has this product
       shouldCheckDuplicate = true;
     }
     
-    if (shouldCheckDuplicate) {
-      // Check if vendor already has this product (for cases other than Case 1)
+    if (!productId && !globalProductId && globalProductName) {
+      // For Case 4, we still need to check if admin already has this product
+      shouldCheckDuplicate = true;
+    }
+    
+    if (shouldCheckDuplicate && product) {
+      // Check if admin already has this product (for cases other than Case 1)
       const existingVendorProduct = await VendorProduct.findOne({
         productId: product._id,
         vendorId: req.user?.id
@@ -649,7 +503,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
     
     // Create vendor product with pending status
     const vendorProduct = new VendorProduct({
-      productId: product._id as mongoose.Types.ObjectId,
+      productId: product?._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated user ID
       price: price || 0, // Default to 0 if not provided
       stock: stock || 0, // Default to 0 if not provided

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
+import fileUpload from 'express-fileupload';
 import userRoutes from './routes/userRoutes';
 import adminRoutes from './routes/adminRoutes';
 import vendorRoutes from './routes/vendorRoutes';
@@ -29,6 +30,11 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(morgan('combined')); // Add Morgan middleware for logging
+app.use(fileUpload({
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  useTempFiles: true,
+  tempFileDir: '/tmp/'
+}));
 
 // Routes
 app.use('/api/v1', userRoutes);
