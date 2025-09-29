@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 interface IWishlistItem {
-  _id?: mongoose.Types.ObjectId;
   vendorProductId: mongoose.Types.ObjectId;
   addedAt: Date;
 }
@@ -21,6 +20,7 @@ const WishlistSchema: Schema<IWishlist> = new Schema({
     unique: true
   },
   items: [{
+    _id: false,
     vendorProductId: { 
       type: Schema.Types.ObjectId, 
       ref: 'VendorProduct',

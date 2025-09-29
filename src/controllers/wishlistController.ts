@@ -93,7 +93,7 @@ export const addItemToWishlist = catchAsyncError(async (req: Request, res: Respo
 
 // Remove item from wishlist
 export const removeItemFromWishlist = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { itemId } = req.params;
+  const { vendorProductId } = req.params;
 
   // Find wishlist for user
   const wishlist = await Wishlist.findOne({ userId: req.user._id });
@@ -102,9 +102,9 @@ export const removeItemFromWishlist = catchAsyncError(async (req: Request, res: 
     return next(new AppError('Wishlist not found', 404));
   }
 
-  // Find item in wishlist
+  // Find item in wishlist using vendorProductId
   const itemIndex = wishlist.items.findIndex(
-    item => item._id && item._id.toString() === itemId
+    item => item.vendorProductId.toString() === vendorProductId
   );
 
   if (itemIndex === -1) {

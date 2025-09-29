@@ -11,10 +11,10 @@ import { isAuthenticated, isUser } from '../middleware/auth';
 const router = Router();
 
 // Protected routes - User specific
-router.get('/wishlist', isAuthenticated, isUser, getWishlist);
-router.post('/wishlist/items', isAuthenticated, isUser, addItemToWishlist);
-router.delete('/wishlist/items/:itemId', isAuthenticated, isUser, removeItemFromWishlist);
-router.delete('/wishlist', isAuthenticated, isUser, clearWishlist);
-router.get('/wishlist/check/:vendorProductId', isAuthenticated, isUser, isItemInWishlist);
+router.get('/', isAuthenticated, isUser, getWishlist);
+router.post('/items', isAuthenticated, isUser, addItemToWishlist);
+router.delete('/items/:vendorProductId', isAuthenticated, isUser, removeItemFromWishlist);
+router.delete('/', isAuthenticated, isUser, clearWishlist);
+router.get('/check/:vendorProductId', isAuthenticated, isUser, isItemInWishlist);
 
 export default router;
