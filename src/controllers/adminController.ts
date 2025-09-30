@@ -858,6 +858,187 @@ export const deleteProduct = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+export const getAdminUploadedProducts = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Get pagination parameters from query
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // Build the aggregation pipeline to get vendor products uploaded by any admin
+    // First, we need to find all admin users to filter vendor products
+    const adminUsers: any = await Admin.find({ role: 'admin' }, { _id: 1 });
+    const adminIds = adminUsers.map((admin: any) => admin._id);
+    
+    const pipeline = [
+      // Match products uploaded by any admin
+      {
+        $match: {
+          vendorId: { $in: adminIds }
+        }
+      },
+      // Lookup product details
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productDetails'
+        }
+      },
+      {
+        $unwind: '$productDetails'
+      },
+      // Lookup category details
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'productDetails.category',
+          foreignField: '_id',
+          as: 'categoryDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$categoryDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // Lookup brand details
+      {
+        $lookup: {
+          from: 'brands',
+          localField: 'productDetails.brand',
+          foreignField: '_id',
+          as: 'brandDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$brandDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // Project the required fields
+      {
+        $project: {
+          _id: 1,
+          price: 1,
+          stock: 1,
+          sku: 1,
+          status: 1,
+          isFeatured: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          productDetails: {
+            _id: 1,
+            name: 1,
+            description: 1,
+            images: 1,
+            tags: 1,
+            isActive: 1,
+            createdAt: 1,
+            updatedAt: 1
+          },
+          categoryDetails: {
+            _id: 1,
+            name: 1
+          },
+          brandDetails: {
+            _id: 1,
+            name: 1
+          }
+        }
+      }
+    ];
+    
+    // Use aggregate pagination
+    const options = {
+      page,
+      limit
+    };
+    
+    const aggregate = VendorProduct.aggregate(pipeline);
+    const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
+    
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Error fetching admin uploaded products:', error);
+    res.status(500).json({ message: 'Error fetching admin uploaded products', error: error.message || error });
+  }
+}
+
+// Update admin uploaded product (vendor product info)
+export const updateAdminUploadedProducts = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // First, find the vendor product to ensure it was uploaded by an admin
+    const adminUsers: any = await Admin.find({ role: 'admin' }, { _id: 1 });
+    const adminIds = adminUsers.map((admin: any) => admin._id);
+    
+    const vendorProduct = await VendorProduct.findOne({
+      _id: req.params.id,
+      vendorId: { $in: adminIds }
+    }).populate('productId');
+    
+    if (!vendorProduct) {
+      res.status(404).json({ message: 'Product not found or not uploaded by an admin' });
+      return;
+    }
+    
+    // Update the vendor product fields
+    const { price, stock, sku, status, isFeatured } = req.body;
+    
+    if (price !== undefined) vendorProduct.price = price;
+    if (stock !== undefined) vendorProduct.stock = stock;
+    if (sku !== undefined) vendorProduct.sku = sku;
+    if (status !== undefined) vendorProduct.status = status;
+    if (isFeatured !== undefined) vendorProduct.isFeatured = isFeatured;
+    
+    await vendorProduct.save();
+    
+    // Note: Only vendor-specific information (price, stock, SKU, status) is updated here
+    // Core product information (name, description, etc.) is shared across all vendors
+    // To update core product information, use the separate product update endpoint
+    // This ensures each vendor can maintain their own pricing and stock while sharing product details
+    
+    res.status(200).json({ 
+      message: 'Vendor product information updated successfully. Only vendor-specific details (price, stock, SKU, status) can be updated here. To update core product information (name, description, etc.) that is shared across all vendors, use the main product update endpoint.',
+      vendorProduct 
+    });
+  } catch (error: any) {
+    console.error('Error updating admin uploaded product:', error);
+    res.status(500).json({ message: 'Error updating admin uploaded product', error: error.message || error });
+  }
+}
+
+// Delete admin uploaded product (vendor product)
+export const deleteAdminUploadedProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // First, find the vendor product to ensure it was uploaded by an admin
+    const adminUsers: any = await Admin.find({ role: 'admin' }, { _id: 1 });
+    const adminIds = adminUsers.map((admin: any) => admin._id);
+    
+    const vendorProduct = await VendorProduct.findOne({
+      _id: req.params.id,
+      vendorId: { $in: adminIds }
+    }).populate('productId');
+    
+    if (!vendorProduct) {
+      res.status(404).json({ message: 'Product not found or not uploaded by an admin' });
+      return;
+    }
+    
+    // Delete the vendor product (this only removes the admin's listing, not the core product)
+    await VendorProduct.findByIdAndDelete(req.params.id);
+    
+    res.status(200).json({ 
+      message: 'Product deleted successfully from admin inventory. Note: This only removes the product from the admin\'s inventory, not the core product information which may be used by other vendors.' 
+    });
+  } catch (error: any) {
+    console.error('Error deleting admin uploaded product:', error);
+    res.status(500).json({ message: 'Error deleting admin uploaded product', error: error.message || error });
+  }
+}
+
 // ==================== VENDOR MANAGEMENT ====================
 
 // Get all vendors
@@ -982,11 +1163,7 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
           sku: 1,
           status: 1,
           isFeatured: 1,
-          discountPercentage: 1,
           images: 1,
-          shippingInfo: 1,
-          discountAmount: 1,
-          isOnSale: 1,
           createdAt: 1,
           updatedAt: 1,
           productDetails: {

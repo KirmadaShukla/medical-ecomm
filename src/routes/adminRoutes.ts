@@ -26,6 +26,9 @@ import {
   // Vendor product routes
   getVendorProducts,
   updateVendorProductStatus,
+  getAdminUploadedProducts,
+  updateAdminUploadedProducts,
+  deleteAdminUploadedProduct,
 } from '../controllers/adminController';
 import { isAuthenticated, isAdmin } from '../middleware/auth';
 
@@ -60,6 +63,9 @@ router.put('/products/:id', isAuthenticated, isAdmin, updateProduct);
 router.delete('/products/:id', isAuthenticated, isAdmin, deleteProduct);
 router.delete('/products/:productId/images/:imagePublicId', isAuthenticated, isAdmin, deleteProductImage);
 
+router.get('/get-admin-products',isAuthenticated,isAdmin,getAdminUploadedProducts)
+router.put('/update-admin-products/:id',isAuthenticated,isAdmin,updateAdminUploadedProducts)
+router.delete('/delete-admin-product/:id',isAuthenticated,isAdmin,deleteAdminUploadedProduct)
 // Vendor product routes
 router.get('/vendor-products', isAuthenticated, isAdmin, getVendorProducts);
 router.put('/vendor-products/:id/status', isAuthenticated, isAdmin, updateVendorProductStatus);
