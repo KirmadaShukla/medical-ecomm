@@ -15,9 +15,7 @@ export interface IVendor extends Document {
     routingNumber: string;
     bankName: string;
   };
-  commissionRate: number; // Commission percentage for this vendor
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
-  rating?: number;
   totalSales?: number;
   totalProducts?: number;
   comparePassword: (candidatePassword: string) => Promise<boolean>;
@@ -67,21 +65,10 @@ const VendorSchema: Schema = new Schema({
     routingNumber: { type: String },
     bankName: { type: String }
   },
-  commissionRate: { 
-    type: Number, 
-    default: 10, // Default 10% commission
-    min: 0,
-    max: 100
-  },
   status: { 
     type: String, 
     enum: ['pending', 'approved', 'rejected', 'suspended'],
     default: 'pending'
-  },
-  rating: { 
-    type: Number,
-    min: 0,
-    max: 5
   },
   totalSales: { 
     type: Number, 
