@@ -10,71 +10,38 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
   try {
     const { category, brand, minPrice, maxPrice, sortBy, page = 1, limit = 10 } = req.query;
     
-    // Build match conditions
-    const matchConditions: any = {};
-    
-    if (category) {
-      matchConditions.category = category;
-    }
-    
-    if (brand) {
-      matchConditions.brand = brand;
-    }
-    
     // Build sort conditions
     let sortConditions: any = { createdAt: -1 };
     if (sortBy === 'price-low') {
-      sortConditions = { minPrice: 1 };
+      sortConditions = { 'vendorProducts.price': 1 };
     } else if (sortBy === 'price-high') {
-      sortConditions = { minPrice: -1 };
+      sortConditions = { 'vendorProducts.price': -1 };
     } else if (sortBy === 'name') {
-      sortConditions = { name: 1 };
+      sortConditions = { 'productDetails.name': 1 };
     }
     
     const pipeline: any[] = [
       {
-        $match: matchConditions
+        $match: {
+          status: 'approved',
+          isActive: true
+        }
       },
       {
         $lookup: {
-          from: 'vendorproducts',
-          localField: '_id',
-          foreignField: 'productId',
-          as: 'vendorProducts'
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productDetails'
         }
       },
       {
-        $match: {
-          'vendorProducts.status': 'approved',
-          'vendorProducts.isActive': true
-        }
-      },
-      {
-        $unwind: '$vendorProducts'
-      },
-      {
-        $group: {
-          _id: '$_id',
-          name: { $first: '$name' },
-          description: { $first: '$description' },
-          category: { $first: '$category' },
-          brand: { $first: '$brand' },
-          images: { $first: '$images' },
-          tags: { $first: '$tags' },
-          isActive: { $first: '$isActive' },
-          createdAt: { $first: '$createdAt' },
-          updatedAt: { $first: '$updatedAt' },
-          minPrice: { $min: '$vendorProducts.price' },
-          maxPrice: { $max: '$vendorProducts.price' },
-          avgPrice: { $avg: '$vendorProducts.price' },
-          vendorCount: { $sum: 1 },
-          vendorProducts: { $push: '$vendorProducts' }
-        }
+        $unwind: '$productDetails'
       },
       {
         $lookup: {
           from: 'categories',
-          localField: 'category',
+          localField: 'productDetails.category',
           foreignField: '_id',
           as: 'categoryDetails'
         }
@@ -88,7 +55,7 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
       {
         $lookup: {
           from: 'brands',
-          localField: 'brand',
+          localField: 'productDetails.brand',
           foreignField: '_id',
           as: 'brandDetails'
         }
@@ -100,37 +67,76 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
         }
       },
       {
-        $project: {
-          _id: 1,
-          name: 1,
-          description: 1,
-          category: 1,
-          brand: 1,
-          images: 1,
-          tags: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          minPrice: 1,
-          maxPrice: 1,
-          avgPrice: 1,
-          vendorCount: 1,
-          vendorProducts: {
-            $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
-          },
-          categoryDetails: {
-            _id: 1,
-            name: 1
-          },
-          brandDetails: {
-            _id: 1,
-            name: 1
-          }
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendorId',
+          foreignField: '_id',
+          as: 'vendorDetails'
         }
       },
       {
-        $sort: sortConditions
+        $unwind: {
+          path: '$vendorDetails',
+          preserveNullAndEmptyArrays: true
+        }
       }
     ];
+    
+    // Add category filter if provided
+    if (category) {
+      pipeline.push({
+        $match: {
+          'productDetails.category': category
+        }
+      });
+    }
+    
+    // Add brand filter if provided
+    if (brand) {
+      pipeline.push({
+        $match: {
+          'productDetails.brand': brand
+        }
+      });
+    }
+    
+    // Add projection to limit fields
+    pipeline.push({
+      $project: {
+        _id: 1,
+        price: 1,
+        stock: 1,
+        sku: 1,
+        isActive: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        productDetails: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          images: 1,
+          createdAt: 1,
+          updatedAt: 1
+        },
+        categoryDetails: {
+          _id: 1,
+          name: 1
+        },
+        brandDetails: {
+          _id: 1,
+          name: 1
+        },
+        vendorDetails: {
+          _id: 1,
+          businessName: 1
+        }
+      }
+    });
+    
+    // Add sorting
+    pipeline.push({
+      $sort: sortConditions
+    });
     
     // Use aggregate pagination
     const options = {
@@ -138,8 +144,8 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
       limit: parseInt(limit as string)
     };
     
-    const aggregate = Product.aggregate(pipeline);
-    const result = await (Product.aggregatePaginate as any)(aggregate, options);
+    const aggregate = VendorProduct.aggregate(pipeline);
+    const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
     
     res.status(200).json(result);
   } catch (error) {
@@ -156,59 +162,40 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
     // Build sort conditions
     let sortConditions: any = { createdAt: -1 };
     if (sortBy === 'price-low') {
-      sortConditions = { minPrice: 1 };
+      sortConditions = { 'vendorProducts.price': 1 };
     } else if (sortBy === 'price-high') {
-      sortConditions = { minPrice: -1 };
+      sortConditions = { 'vendorProducts.price': -1 };
     } else if (sortBy === 'name') {
-      sortConditions = { name: 1 };
+      sortConditions = { 'productDetails.name': 1 };
     }
     
     const pipeline: any[] = [
       {
         $match: {
-          category: categoryId
+          status: 'approved',
+          isActive: true
         }
       },
       {
         $lookup: {
-          from: 'vendorproducts',
-          localField: '_id',
-          foreignField: 'productId',
-          as: 'vendorProducts'
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productDetails'
         }
+      },
+      {
+        $unwind: '$productDetails'
       },
       {
         $match: {
-          'vendorProducts.status': 'approved',
-          'vendorProducts.isActive': true
-        }
-      },
-      {
-        $unwind: '$vendorProducts'
-      },
-      {
-        $group: {
-          _id: '$_id',
-          name: { $first: '$name' },
-          description: { $first: '$description' },
-          category: { $first: '$category' },
-          brand: { $first: '$brand' },
-          images: { $first: '$images' },
-          tags: { $first: '$tags' },
-          isActive: { $first: '$isActive' },
-          createdAt: { $first: '$createdAt' },
-          updatedAt: { $first: '$updatedAt' },
-          minPrice: { $min: '$vendorProducts.price' },
-          maxPrice: { $max: '$vendorProducts.price' },
-          avgPrice: { $avg: '$vendorProducts.price' },
-          vendorCount: { $sum: 1 },
-          vendorProducts: { $push: '$vendorProducts' }
+          'productDetails.category': categoryId
         }
       },
       {
         $lookup: {
           from: 'categories',
-          localField: 'category',
+          localField: 'productDetails.category',
           foreignField: '_id',
           as: 'categoryDetails'
         }
@@ -222,7 +209,7 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
       {
         $lookup: {
           from: 'brands',
-          localField: 'brand',
+          localField: 'productDetails.brand',
           foreignField: '_id',
           as: 'brandDetails'
         }
@@ -234,22 +221,35 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
         }
       },
       {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendorId',
+          foreignField: '_id',
+          as: 'vendorDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$vendorDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
         $project: {
           _id: 1,
-          name: 1,
-          description: 1,
-          category: 1,
-          brand: 1,
-          images: 1,
-          tags: 1,
+          price: 1,
+          stock: 1,
+          sku: 1,
+          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
-          minPrice: 1,
-          maxPrice: 1,
-          avgPrice: 1,
-          vendorCount: 1,
-          vendorProducts: {
-            $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
+          productDetails: {
+            _id: 1,
+            name: 1,
+            description: 1,
+            images: 1,
+            createdAt: 1,
+            updatedAt: 1
           },
           categoryDetails: {
             _id: 1,
@@ -258,6 +258,10 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
           brandDetails: {
             _id: 1,
             name: 1
+          },
+          vendorDetails: {
+            _id: 1,
+            businessName: 1
           }
         }
       },
@@ -272,8 +276,8 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
       limit: parseInt(limit as string)
     };
     
-    const aggregate = Product.aggregate(pipeline);
-    const result = await (Product.aggregatePaginate as any)(aggregate, options);
+    const aggregate = VendorProduct.aggregate(pipeline);
+    const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
     
     res.status(200).json(result);
   } catch (error) {
@@ -290,59 +294,40 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
     // Build sort conditions
     let sortConditions: any = { createdAt: -1 };
     if (sortBy === 'price-low') {
-      sortConditions = { minPrice: 1 };
+      sortConditions = { 'vendorProducts.price': 1 };
     } else if (sortBy === 'price-high') {
-      sortConditions = { minPrice: -1 };
+      sortConditions = { 'vendorProducts.price': -1 };
     } else if (sortBy === 'name') {
-      sortConditions = { name: 1 };
+      sortConditions = { 'productDetails.name': 1 };
     }
     
     const pipeline: any[] = [
       {
         $match: {
-          brand: brandId
+          status: 'approved',
+          isActive: true
         }
       },
       {
         $lookup: {
-          from: 'vendorproducts',
-          localField: '_id',
-          foreignField: 'productId',
-          as: 'vendorProducts'
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productDetails'
         }
+      },
+      {
+        $unwind: '$productDetails'
       },
       {
         $match: {
-          'vendorProducts.status': 'approved',
-          'vendorProducts.isActive': true
-        }
-      },
-      {
-        $unwind: '$vendorProducts'
-      },
-      {
-        $group: {
-          _id: '$_id',
-          name: { $first: '$name' },
-          description: { $first: '$description' },
-          category: { $first: '$category' },
-          brand: { $first: '$brand' },
-          images: { $first: '$images' },
-          tags: { $first: '$tags' },
-          isActive: { $first: '$isActive' },
-          createdAt: { $first: '$createdAt' },
-          updatedAt: { $first: '$updatedAt' },
-          minPrice: { $min: '$vendorProducts.price' },
-          maxPrice: { $max: '$vendorProducts.price' },
-          avgPrice: { $avg: '$vendorProducts.price' },
-          vendorCount: { $sum: 1 },
-          vendorProducts: { $push: '$vendorProducts' }
+          'productDetails.brand': brandId
         }
       },
       {
         $lookup: {
           from: 'categories',
-          localField: 'category',
+          localField: 'productDetails.category',
           foreignField: '_id',
           as: 'categoryDetails'
         }
@@ -356,7 +341,7 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
       {
         $lookup: {
           from: 'brands',
-          localField: 'brand',
+          localField: 'productDetails.brand',
           foreignField: '_id',
           as: 'brandDetails'
         }
@@ -368,22 +353,35 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
         }
       },
       {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendorId',
+          foreignField: '_id',
+          as: 'vendorDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$vendorDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
         $project: {
           _id: 1,
-          name: 1,
-          description: 1,
-          category: 1,
-          brand: 1,
-          images: 1,
-          tags: 1,
+          price: 1,
+          stock: 1,
+          sku: 1,
+          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
-          minPrice: 1,
-          maxPrice: 1,
-          avgPrice: 1,
-          vendorCount: 1,
-          vendorProducts: {
-            $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
+          productDetails: {
+            _id: 1,
+            name: 1,
+            description: 1,
+            images: 1,
+            createdAt: 1,
+            updatedAt: 1
           },
           categoryDetails: {
             _id: 1,
@@ -392,6 +390,10 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
           brandDetails: {
             _id: 1,
             name: 1
+          },
+          vendorDetails: {
+            _id: 1,
+            businessName: 1
           }
         }
       },
@@ -406,8 +408,8 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
       limit: parseInt(limit as string)
     };
     
-    const aggregate = Product.aggregate(pipeline);
-    const result = await (Product.aggregatePaginate as any)(aggregate, options);
+    const aggregate = VendorProduct.aggregate(pipeline);
+    const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
     
     res.status(200).json(result);
   } catch (error) {
@@ -420,30 +422,29 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
   try {
     const { productId } = req.params;
     
-    const product = await Product.aggregate([
+    const vendorProduct = await VendorProduct.aggregate([
       {
         $match: {
-          _id: new Types.ObjectId(productId)
+          _id: new Types.ObjectId(productId),
+          status: 'approved',
+          isActive: true
         }
       },
       {
         $lookup: {
-          from: 'vendorproducts',
-          localField: '_id',
-          foreignField: 'productId',
-          as: 'vendorProducts'
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productDetails'
         }
       },
       {
-        $match: {
-          'vendorProducts.status': 'approved',
-          'vendorProducts.isActive': true
-        }
+        $unwind: '$productDetails'
       },
       {
         $lookup: {
           from: 'categories',
-          localField: 'category',
+          localField: 'productDetails.category',
           foreignField: '_id',
           as: 'categoryDetails'
         }
@@ -457,7 +458,7 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
       {
         $lookup: {
           from: 'brands',
-          localField: 'brand',
+          localField: 'productDetails.brand',
           foreignField: '_id',
           as: 'brandDetails'
         }
@@ -469,17 +470,36 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
         }
       },
       {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendorId',
+          foreignField: '_id',
+          as: 'vendorDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$vendorDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
         $project: {
           _id: 1,
-          name: 1,
-          description: 1,
-          category: 1,
-          brand: 1,
-          images: 1,
-          tags: 1,
+          price: 1,
+          stock: 1,
+          sku: 1,
+          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
-          vendorProducts: 1,
+          productDetails: {
+            _id: 1,
+            name: 1,
+            description: 1,
+            images: 1,
+            createdAt: 1,
+            updatedAt: 1
+          },
           categoryDetails: {
             _id: 1,
             name: 1
@@ -487,17 +507,21 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
           brandDetails: {
             _id: 1,
             name: 1
+          },
+          vendorDetails: {
+            _id: 1,
+            businessName: 1
           }
         }
       }
     ]);
     
-    if (!product || product.length === 0) {
+    if (!vendorProduct || vendorProduct.length === 0) {
       res.status(404).json({ message: 'Product not found' });
       return;
     }
     
-    res.status(200).json(product[0]);
+    res.status(200).json(vendorProduct[0]);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching product', error });
   }
@@ -516,62 +540,43 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
     // Build sort conditions
     let sortConditions: any = { createdAt: -1 };
     if (sortBy === 'price-low') {
-      sortConditions = { minPrice: 1 };
+      sortConditions = { 'vendorProducts.price': 1 };
     } else if (sortBy === 'price-high') {
-      sortConditions = { minPrice: -1 };
+      sortConditions = { 'vendorProducts.price': -1 };
     } else if (sortBy === 'name') {
-      sortConditions = { name: 1 };
+      sortConditions = { 'productDetails.name': 1 };
     }
     
     const pipeline: any[] = [
       {
         $match: {
+          status: 'approved',
+          isActive: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productDetails'
+        }
+      },
+      {
+        $unwind: '$productDetails'
+      },
+      {
+        $match: {
           $or: [
-            { name: { $regex: query, $options: 'i' } },
-            { tags: { $in: [query] } }
+            { 'productDetails.name': { $regex: query, $options: 'i' } },
+            { 'productDetails.tags': { $in: [query] } }
           ]
         }
       },
       {
         $lookup: {
-          from: 'vendorproducts',
-          localField: '_id',
-          foreignField: 'productId',
-          as: 'vendorProducts'
-        }
-      },
-      {
-        $match: {
-          'vendorProducts.status': 'approved',
-          'vendorProducts.isActive': true
-        }
-      },
-      {
-        $unwind: '$vendorProducts'
-      },
-      {
-        $group: {
-          _id: '$_id',
-          name: { $first: '$name' },
-          description: { $first: '$description' },
-          category: { $first: '$category' },
-          brand: { $first: '$brand' },
-          images: { $first: '$images' },
-          tags: { $first: '$tags' },
-          isActive: { $first: '$isActive' },
-          createdAt: { $first: '$createdAt' },
-          updatedAt: { $first: '$updatedAt' },
-          minPrice: { $min: '$vendorProducts.price' },
-          maxPrice: { $max: '$vendorProducts.price' },
-          avgPrice: { $avg: '$vendorProducts.price' },
-          vendorCount: { $sum: 1 },
-          vendorProducts: { $push: '$vendorProducts' }
-        }
-      },
-      {
-        $lookup: {
           from: 'categories',
-          localField: 'category',
+          localField: 'productDetails.category',
           foreignField: '_id',
           as: 'categoryDetails'
         }
@@ -585,7 +590,7 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
       {
         $lookup: {
           from: 'brands',
-          localField: 'brand',
+          localField: 'productDetails.brand',
           foreignField: '_id',
           as: 'brandDetails'
         }
@@ -597,22 +602,35 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
         }
       },
       {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendorId',
+          foreignField: '_id',
+          as: 'vendorDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$vendorDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
         $project: {
           _id: 1,
-          name: 1,
-          description: 1,
-          category: 1,
-          brand: 1,
-          images: 1,
-          tags: 1,
+          price: 1,
+          stock: 1,
+          sku: 1,
+          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
-          minPrice: 1,
-          maxPrice: 1,
-          avgPrice: 1,
-          vendorCount: 1,
-          vendorProducts: {
-            $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
+          productDetails: {
+            _id: 1,
+            name: 1,
+            description: 1,
+            images: 1,
+            createdAt: 1,
+            updatedAt: 1
           },
           categoryDetails: {
             _id: 1,
@@ -621,6 +639,10 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
           brandDetails: {
             _id: 1,
             name: 1
+          },
+          vendorDetails: {
+            _id: 1,
+            businessName: 1
           }
         }
       },
@@ -635,8 +657,8 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
       limit: parseInt(limit as string)
     };
     
-    const aggregate = Product.aggregate(pipeline);
-    const result = await (Product.aggregatePaginate as any)(aggregate, options);
+    const aggregate = VendorProduct.aggregate(pipeline);
+    const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
     
     res.status(200).json(result);
   } catch (error) {
@@ -652,55 +674,36 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
     // Build sort conditions
     let sortConditions: any = { createdAt: -1 };
     if (sortBy === 'price-low') {
-      sortConditions = { minPrice: 1 };
+      sortConditions = { 'vendorProducts.price': 1 };
     } else if (sortBy === 'price-high') {
-      sortConditions = { minPrice: -1 };
+      sortConditions = { 'vendorProducts.price': -1 };
     } else if (sortBy === 'name') {
-      sortConditions = { name: 1 };
+      sortConditions = { 'productDetails.name': 1 };
     }
     
     const pipeline: any[] = [
       {
-        $lookup: {
-          from: 'vendorproducts',
-          localField: '_id',
-          foreignField: 'productId',
-          as: 'vendorProducts'
-        }
-      },
-      {
         $match: {
-          'vendorProducts.status': 'approved',
-          'vendorProducts.isFeatured': true,
-          'vendorProducts.isActive': true
+          status: 'approved',
+          isActive: true,
+          isFeatured: true
         }
       },
       {
-        $unwind: '$vendorProducts'
+        $lookup: {
+          from: 'products',
+          localField: 'productId',
+          foreignField: '_id',
+          as: 'productDetails'
+        }
       },
       {
-        $group: {
-          _id: '$_id',
-          name: { $first: '$name' },
-          description: { $first: '$description' },
-          category: { $first: '$category' },
-          brand: { $first: '$brand' },
-          images: { $first: '$images' },
-          tags: { $first: '$tags' },
-          isActive: { $first: '$isActive' },
-          createdAt: { $first: '$createdAt' },
-          updatedAt: { $first: '$updatedAt' },
-          minPrice: { $min: '$vendorProducts.price' },
-          maxPrice: { $max: '$vendorProducts.price' },
-          avgPrice: { $avg: '$vendorProducts.price' },
-          vendorCount: { $sum: 1 },
-          vendorProducts: { $push: '$vendorProducts' }
-        }
+        $unwind: '$productDetails'
       },
       {
         $lookup: {
           from: 'categories',
-          localField: 'category',
+          localField: 'productDetails.category',
           foreignField: '_id',
           as: 'categoryDetails'
         }
@@ -714,7 +717,7 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
       {
         $lookup: {
           from: 'brands',
-          localField: 'brand',
+          localField: 'productDetails.brand',
           foreignField: '_id',
           as: 'brandDetails'
         }
@@ -726,22 +729,35 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
         }
       },
       {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendorId',
+          foreignField: '_id',
+          as: 'vendorDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$vendorDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
         $project: {
           _id: 1,
-          name: 1,
-          description: 1,
-          category: 1,
-          brand: 1,
-          images: 1,
-          tags: 1,
+          price: 1,
+          stock: 1,
+          sku: 1,
+          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
-          minPrice: 1,
-          maxPrice: 1,
-          avgPrice: 1,
-          vendorCount: 1,
-          vendorProducts: {
-            $slice: ['$vendorProducts', 5] // Limit to 5 vendor products
+          productDetails: {
+            _id: 1,
+            name: 1,
+            description: 1,
+            images: 1,
+            createdAt: 1,
+            updatedAt: 1
           },
           categoryDetails: {
             _id: 1,
@@ -750,6 +766,10 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
           brandDetails: {
             _id: 1,
             name: 1
+          },
+          vendorDetails: {
+            _id: 1,
+            businessName: 1
           }
         }
       },
@@ -764,8 +784,8 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
       limit: parseInt(limit as string)
     };
     
-    const aggregate = Product.aggregate(pipeline);
-    const result = await (Product.aggregatePaginate as any)(aggregate, options);
+    const aggregate = VendorProduct.aggregate(pipeline);
+    const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
     
     res.status(200).json(result);
   } catch (error) {
