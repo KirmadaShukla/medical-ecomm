@@ -9,6 +9,7 @@ import {
   updateVendorProduct, 
   deleteVendorProduct, 
   registerVendor
+  // Remove order-related functions as they've been moved to orderRoutes.ts
 } from '../controllers/vendorController';
 import { isAuthenticated, isVendor } from '../middleware/auth';
 
@@ -29,5 +30,7 @@ router.post('/products', addProduct); // Using the unified function
 router.get('/products', getVendorProducts);
 router.put('/products/:id', updateVendorProduct);
 router.delete('/products/:id', deleteVendorProduct);
+
+// Remove order routes as they've been moved to orderRoutes.ts
 
 export default router;

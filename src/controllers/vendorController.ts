@@ -6,6 +6,7 @@ import Category from '../models/category';
 import User from '../models/User';
 import Vendor from '../models/vendors';
 import GlobalProduct from '../models/globalProduct';
+import Order from '../models/order';
 import { generateVendorToken } from '../utils/tokenUtils';
 import { uploadProductImages } from '../utils/cloudinary';
 
@@ -615,6 +616,7 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
           sku: 1,
           status: 1,
           isFeatured: 1,
+          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
           productDetails: {
