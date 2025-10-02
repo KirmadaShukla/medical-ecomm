@@ -1093,7 +1093,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"globalProductId\": \"{{global_product_id}}\"\n}"
+							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"globalProductId\": \"{{global_product_id}}\",\n  \"isActive\": true\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/admin/products",
@@ -1106,6 +1106,70 @@
 							]
 						},
 						"description": "Add an existing product as an admin (productId provided) - Handles Cases 2 & 3: Product exists but global product ID doesn't exist (Case 2) or both exist (Case 3)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Existing Product with Images (Admin) - FormData",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "productId",
+									"value": "{{product_id}}",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "4.99",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "50",
+									"type": "text"
+								},
+								{
+									"key": "sku",
+									"value": "HS-001-V",
+									"type": "text"
+								},
+								{
+									"key": "globalProductId",
+									"value": "{{global_product_id}}",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": "/path/to/your/image.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"description": "Add an existing product as an admin with image upload using formData"
 					},
 					"response": []
 				},
@@ -1125,7 +1189,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"globalProductName\": \"Protective Masks\"\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
+							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"globalProductName\": \"Protective Masks\",\n  \"isActive\": true\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/admin/products",
@@ -1138,6 +1202,70 @@
 							]
 						},
 						"description": "Create a new global product and associate it with an existing product - Case 2: Product ID exists but global product ID doesn't exist"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Global Product for Existing Product with Images (Admin) - FormData",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "productId",
+									"value": "{{product_id}}",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "4.99",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "50",
+									"type": "text"
+								},
+								{
+									"key": "sku",
+									"value": "HS-001-V2",
+									"type": "text"
+								},
+								{
+									"key": "globalProductName",
+									"value": "Protective Masks",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": "/path/to/your/image.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"description": "Create a new global product and associate it with an existing product with image upload using formData"
 					},
 					"response": []
 				},
@@ -1177,6 +1305,77 @@
 							]
 						},
 						"description": "Update product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product with Images (FormData)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "Updated Face Mask",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Updated disposable face mask for medical use",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "{{category_id}}",
+									"type": "text"
+								},
+								{
+									"key": "brand",
+									"value": "{{brand_id}}",
+									"type": "text"
+								},
+								{
+									"key": "tags",
+									"value": "[\"mask\", \"disposable\", \"medical\", \"updated\"]",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": "/path/to/your/image.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/products/:productId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"products",
+								":productId"
+							],
+							"variable": [
+								{
+									"key": "productId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update product with image upload using formData (admin only)"
 					},
 					"response": []
 				},
@@ -1264,7 +1463,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"N95 Mask\",\n  \"description\": \"N95 protective mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/n95.jpg\"],\n  \"tags\": [\"mask\", \"n95\", \"medical\"],\n  \"price\": 7.99,\n  \"stock\": 50,\n  \"sku\": \"N95-001\",\n  \"globalProductId\": \"{{global_product_id}}\"\n  // Case 1: Global product ID exists but product ID doesn't exist\n}"
+							"raw": "{\n  \"name\": \"N95 Mask\",\n  \"description\": \"N95 protective mask for medical use\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/n95.jpg\"],\n  \"tags\": [\"mask\", \"n95\", \"medical\"],\n  \"price\": 7.99,\n  \"stock\": 50,\n  \"sku\": \"N95-001\",\n  \"globalProductId\": \"{{global_product_id}}\",\n  \"isActive\": true\n  // Case 1: Global product ID exists but product ID doesn't exist\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/admin/products",
@@ -1277,6 +1476,250 @@
 							]
 						},
 						"description": "Add a new product and associate it with an existing global product - Case 1: Global product ID exists but product ID doesn't exist"
+					},
+					"response": []
+				},
+				{
+					"name": "Add New Product to Existing Global Product with Images (Admin) - FormData",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "name",
+									"value": "N95 Mask",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "N95 protective mask for medical use",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "{{category_id}}",
+									"type": "text"
+								},
+								{
+									"key": "brand",
+									"value": "{{brand_id}}",
+									"type": "text"
+								},
+								{
+									"key": "tags",
+									"value": "[\"mask\", \"n95\", \"medical\"]",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "7.99",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "50",
+									"type": "text"
+								},
+								{
+									"key": "sku",
+									"value": "N95-001",
+									"type": "text"
+								},
+								{
+									"key": "globalProductId",
+									"value": "{{global_product_id}}",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": "/path/to/your/image.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"products"
+							]
+						},
+						"description": "Add a new product and associate it with an existing global product with image upload using formData"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Admin Uploaded Products",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/get-admin-products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"get-admin-products"
+							]
+						},
+						"description": "Get admin uploaded products (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Admin Uploaded Product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price\": 6.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001-ADM\",\n  \"status\": \"approved\",\n  \"isFeatured\": true,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/update-admin-products/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"update-admin-products",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update admin uploaded product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Admin Uploaded Product (FormData)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "price",
+									"value": "6.99",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "100",
+									"type": "text"
+								},
+								{
+									"key": "sku",
+									"value": "HS-001-ADM",
+									"type": "text"
+								},
+								{
+									"key": "status",
+									"value": "approved",
+									"type": "text"
+								},
+								{
+									"key": "isFeatured",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/update-admin-products/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"update-admin-products",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update admin uploaded product with formData (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Admin Uploaded Product",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/delete-admin-product/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"delete-admin-product",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Delete admin uploaded product (admin only)"
 					},
 					"response": []
 				}
@@ -1352,6 +1795,106 @@
 			]
 		},
 		{
+			"name": "Admin Vendor Management",
+			"item": [
+				{
+					"name": "Get All Vendors",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/vendors",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"vendors"
+							]
+						},
+						"description": "Get all vendors (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Vendor by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/vendors/:vendorId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"vendors",
+								":vendorId"
+							],
+							"variable": [
+								{
+									"key": "vendorId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get vendor by ID (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Vendor Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"approved\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/vendors/:vendorId/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"vendors",
+								":vendorId",
+								"status"
+							],
+							"variable": [
+								{
+									"key": "vendorId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update vendor status (admin only)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Vendor Management",
 			"item": [
 				{
@@ -1399,7 +1942,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Hand Sanitizer\",\n  \"description\": \"Alcohol-based hand sanitizer\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/sanitizer.jpg\"],\n  \"tags\": [\"sanitizer\", \"alcohol\", \"hand\"],\n  \"isActive\": true,\n  \"price\": 5.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"isFeatured\": false,\n  \"globalProductName\": \"Sanitizers\"\n}"
+							"raw": "{\n  \"name\": \"Hand Sanitizer\",\n  \"description\": \"Alcohol-based hand sanitizer\",\n  \"category\": \"{{category_id}}\",\n  \"brand\": \"{{brand_id}}\",\n  \"images\": [\"https://example.com/sanitizer.jpg\"],\n  \"tags\": [\"sanitizer\", \"alcohol\", \"hand\"],\n  \"price\": 5.99,\n  \"stock\": 100,\n  \"sku\": \"HS-001\",\n  \"isFeatured\": false,\n  \"isActive\": true,\n  \"globalProductName\": \"Sanitizers\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/vendor/products",
@@ -1474,6 +2017,11 @@
 									"type": "text"
 								},
 								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								},
+								{
 									"key": "globalProductName",
 									"value": "Sanitizers",
 									"type": "text"
@@ -1515,7 +2063,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\"\n}"
+							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductId\": \"{{global_product_id}}\",\n  \"isActive\": true\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/vendor/products",
@@ -1528,6 +2076,95 @@
 							]
 						},
 						"description": "Add an existing product as a vendor (productId provided) - Handles Cases 2 & 3: Product exists but global product ID doesn't exist (Case 2) or both exist (Case 3)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Existing Product with Images (Vendor) - FormData",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{vendor_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "productId",
+									"value": "{{product_id}}",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "4.99",
+									"type": "text"
+								},
+								{
+									"key": "comparePrice",
+									"value": "6.99",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "50",
+									"type": "text"
+								},
+								{
+									"key": "sku",
+									"value": "HS-001-V",
+									"type": "text"
+								},
+								{
+									"key": "shippingInfo[weight]",
+									"value": "0.5",
+									"type": "text"
+								},
+								{
+									"key": "shippingInfo[dimensions][length]",
+									"value": "10",
+									"type": "text"
+								},
+								{
+									"key": "shippingInfo[dimensions][width]",
+									"value": "5",
+									"type": "text"
+								},
+								{
+									"key": "shippingInfo[dimensions][height]",
+									"value": "3",
+									"type": "text"
+								},
+								{
+									"key": "globalProductId",
+									"value": "{{global_product_id}}",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": "/path/to/your/image.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/vendor/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendor",
+								"products"
+							]
+						},
+						"description": "Add an existing product as a vendor with image upload using formData"
 					},
 					"response": []
 				},
@@ -1547,7 +2184,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Sanitizers\"\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
+							"raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"price\": 4.99,\n  \"comparePrice\": 6.99,\n  \"stock\": 50,\n  \"sku\": \"HS-001-V2\",\n  \"shippingInfo\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 10,\n      \"width\": 5,\n      \"height\": 3\n    }\n  },\n  \"globalProductName\": \"Sanitizers\",\n  \"isActive\": true\n  // Case 2: Product ID exists but global product ID doesn't exist\n  // Create a new global product and associate with existing product\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/vendor/products",
@@ -1560,6 +2197,195 @@
 							]
 						},
 						"description": "Create a new global product and associate it with an existing product - Case 2: Product ID exists but global product ID doesn't exist"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Global Product for Existing Product with Images (Vendor) - FormData",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{vendor_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "productId",
+									"value": "{{product_id}}",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "4.99",
+									"type": "text"
+								},
+								{
+									"key": "comparePrice",
+									"value": "6.99",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "50",
+									"type": "text"
+								},
+								{
+									"key": "sku",
+									"value": "HS-001-V2",
+									"type": "text"
+								},
+								{
+									"key": "shippingInfo[weight]",
+									"value": "0.5",
+									"type": "text"
+								},
+								{
+									"key": "shippingInfo[dimensions][length]",
+									"value": "10",
+									"type": "text"
+								},
+								{
+									"key": "shippingInfo[dimensions][width]",
+									"value": "5",
+									"type": "text"
+								},
+								{
+									"key": "shippingInfo[dimensions][height]",
+									"value": "3",
+									"type": "text"
+								},
+								{
+									"key": "globalProductName",
+									"value": "Sanitizers",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": "/path/to/your/image.jpg"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/vendor/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendor",
+								"products"
+							]
+						},
+						"description": "Create a new global product and associate it with an existing product with image upload using formData"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Vendor Product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{vendor_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price\": 5.99,\n  \"stock\": 75,\n  \"sku\": \"HS-001-UPD\",\n  \"isFeatured\": true,\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendor/products/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendor",
+								"products",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update vendor product details (vendor only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Vendor Product (FormData)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{vendor_token}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "price",
+									"value": "5.99",
+									"type": "text"
+								},
+								{
+									"key": "stock",
+									"value": "75",
+									"type": "text"
+								},
+								{
+									"key": "sku",
+									"value": "HS-001-UPD",
+									"type": "text"
+								},
+								{
+									"key": "isFeatured",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "isActive",
+									"value": "true",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/vendor/products/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendor",
+								"products",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update vendor product details with formData (vendor only)"
 					},
 					"response": []
 				}

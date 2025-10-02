@@ -1044,7 +1044,7 @@ export const deleteAdminUploadedProduct = async (req: Request, res: Response): P
 // Get all vendors
 export const getVendors = async (req: Request, res: Response): Promise<void> => {
   try {
-    const vendors = await Vendor.find().populate('userId', 'firstName lastName email');
+    const vendors = await Vendor.find();
     res.status(200).json(vendors);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching vendors', error });
@@ -1054,7 +1054,7 @@ export const getVendors = async (req: Request, res: Response): Promise<void> => 
 // Get vendor by ID
 export const getVendorById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const vendor = await Vendor.findById(req.params.id).populate('userId', 'firstName lastName email');
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) {
       res.status(404).json({ message: 'Vendor not found' });
       return;
@@ -1081,7 +1081,7 @@ export const updateVendorStatus = async (req: Request, res: Response): Promise<v
       req.params.id,
       { status },
       { new: true }
-    ).populate('userId', 'firstName lastName email');
+    );
     
     if (!vendor) {
       res.status(404).json({ message: 'Vendor not found' });

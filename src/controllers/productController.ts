@@ -45,7 +45,8 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
       },
       {
         $match: {
-          'vendorProducts.status': 'approved'
+          'vendorProducts.status': 'approved',
+          'vendorProducts.isActive': true
         }
       },
       {
@@ -57,7 +58,6 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
           name: { $first: '$name' },
           description: { $first: '$description' },
           category: { $first: '$category' },
-          subCategory: { $first: '$subCategory' },
           brand: { $first: '$brand' },
           images: { $first: '$images' },
           tags: { $first: '$tags' },
@@ -105,7 +105,6 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
           name: 1,
           description: 1,
           category: 1,
-          subCategory: 1,
           brand: 1,
           images: 1,
           tags: 1,
@@ -182,7 +181,8 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
       },
       {
         $match: {
-          'vendorProducts.status': 'approved'
+          'vendorProducts.status': 'approved',
+          'vendorProducts.isActive': true
         }
       },
       {
@@ -319,7 +319,8 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
       },
       {
         $match: {
-          'vendorProducts.status': 'approved'
+          'vendorProducts.status': 'approved',
+          'vendorProducts.isActive': true
         }
       },
       {
@@ -445,7 +446,8 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
       },
       {
         $match: {
-          'vendorProducts.status': 'approved'
+          'vendorProducts.status': 'approved',
+          'vendorProducts.isActive': true
         }
       },
       {
@@ -553,7 +555,8 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
       },
       {
         $match: {
-          'vendorProducts.status': 'approved'
+          'vendorProducts.status': 'approved',
+          'vendorProducts.isActive': true
         }
       },
       {
@@ -685,6 +688,7 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
         $match: {
           'vendorProducts.status': 'approved',
           'vendorProducts.isFeatured': true,
+          'vendorProducts.isActive': true,
           isActive: true
         }
       },

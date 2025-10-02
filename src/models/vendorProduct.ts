@@ -73,6 +73,10 @@ const VendorProductSchema: Schema = new Schema({
   isFeatured: {
     type: Boolean,
     default: false
+  },
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true
