@@ -32,8 +32,6 @@ app.use(express.json());
 app.use(morgan('combined')); // Add Morgan middleware for logging
 app.use(fileUpload({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
-  useTempFiles: true,
-  tempFileDir: '/tmp/'
 }));
 
 // Routes

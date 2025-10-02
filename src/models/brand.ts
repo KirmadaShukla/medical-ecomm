@@ -6,7 +6,6 @@ export interface IBrandImage {
   url: string;
   publicId: string; // Cloudinary public ID
   alt?: string;
-  isPrimary?: boolean;
 }
 
 export interface IBrand extends Document {
@@ -40,7 +39,6 @@ const BrandSchema: Schema = new Schema({
       type: String
     },
     alt: { type: String },
-    isPrimary: { type: Boolean, default: true }
   },
   website: { 
     type: String,

@@ -226,15 +226,14 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       name, 
       description, 
       category, 
-      subCategory, 
       brand, 
-      tags,
       price, 
       stock, 
       sku, 
       globalProductId, 
       globalProductName,
-      isFeatured
+      isFeatured,
+      isActive
     } = req.body;
     
     let product;
@@ -304,10 +303,8 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         name,
         description,
         category,
-        subCategory,
         brand,
         images: processedImages,
-        tags,
         isActive: true,
         globalProduct: globalProductId
       };
@@ -406,11 +403,8 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
           name,
           description,
           category,
-          subCategory,
           brand,
           images: processedImages,
-          tags,
-          isActive: true
         };
         
         product = new Product(productData);
@@ -449,11 +443,8 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
           name,
           description,
           category,
-          subCategory,
           brand,
           images: processedImages,
-          tags,
-          isActive: true
         };
         
         product = new Product(productData);
@@ -501,7 +492,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       }
     }
     
-    // Create vendor product with pending status
+    // Create vendor product with pending status and isActive flag
     const vendorProduct = new VendorProduct({
       productId: product?._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated user ID
@@ -509,7 +500,8 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       stock: stock || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
       status: 'pending', // Pending approval for both new and existing products
-      isFeatured: isFeatured || false
+      isFeatured: isFeatured || false,
+      isActive: isActive !== undefined ? isActive : true // Use provided isActive or default to true
     });
     
     await vendorProduct.save({ session });
@@ -630,7 +622,6 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
             name: 1,
             description: 1,
             images: 1,
-            tags: 1,
             isActive: 1,
             createdAt: 1,
             updatedAt: 1,
@@ -689,7 +680,14 @@ export const updateVendorProduct = async (req: Request, res: Response): Promise<
     }
     
     // Update the vendor product fields
-    Object.assign(vendorProduct, req.body);
+    // Handle isActive separately to ensure it's properly managed
+    const { isActive, ...otherFields } = req.body;
+    Object.assign(vendorProduct, otherFields);
+    
+    // Only allow isActive to be updated if explicitly provided
+    if (isActive !== undefined) {
+      vendorProduct.isActive = isActive;
+    }
     
     // Set status to pending for admin review
     vendorProduct.status = 'pending';

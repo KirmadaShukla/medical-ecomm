@@ -11,7 +11,7 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
     const { category, brand, minPrice, maxPrice, sortBy, page = 1, limit = 10 } = req.query;
     
     // Build match conditions
-    const matchConditions: any = { isActive: true };
+    const matchConditions: any = {};
     
     if (category) {
       matchConditions.category = category;
@@ -108,7 +108,6 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
           brand: 1,
           images: 1,
           tags: 1,
-          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
           minPrice: 1,
@@ -167,8 +166,7 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
     const pipeline: any[] = [
       {
         $match: {
-          category: categoryId,
-          isActive: true
+          category: categoryId
         }
       },
       {
@@ -194,7 +192,6 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
           name: { $first: '$name' },
           description: { $first: '$description' },
           category: { $first: '$category' },
-          subCategory: { $first: '$subCategory' },
           brand: { $first: '$brand' },
           images: { $first: '$images' },
           tags: { $first: '$tags' },
@@ -242,11 +239,9 @@ export const getProductsByCategory = async (req: Request, res: Response): Promis
           name: 1,
           description: 1,
           category: 1,
-          subCategory: 1,
           brand: 1,
           images: 1,
           tags: 1,
-          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
           minPrice: 1,
@@ -305,8 +300,7 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
     const pipeline: any[] = [
       {
         $match: {
-          brand: brandId,
-          isActive: true
+          brand: brandId
         }
       },
       {
@@ -332,7 +326,6 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
           name: { $first: '$name' },
           description: { $first: '$description' },
           category: { $first: '$category' },
-          subCategory: { $first: '$subCategory' },
           brand: { $first: '$brand' },
           images: { $first: '$images' },
           tags: { $first: '$tags' },
@@ -380,11 +373,9 @@ export const getProductsByBrand = async (req: Request, res: Response): Promise<v
           name: 1,
           description: 1,
           category: 1,
-          subCategory: 1,
           brand: 1,
           images: 1,
           tags: 1,
-          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
           minPrice: 1,
@@ -432,8 +423,7 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
     const product = await Product.aggregate([
       {
         $match: {
-          _id: new Types.ObjectId(productId),
-          isActive: true
+          _id: new Types.ObjectId(productId)
         }
       },
       {
@@ -484,11 +474,9 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
           name: 1,
           description: 1,
           category: 1,
-          subCategory: 1,
           brand: 1,
           images: 1,
           tags: 1,
-          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
           vendorProducts: 1,
@@ -541,8 +529,7 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
           $or: [
             { name: { $regex: query, $options: 'i' } },
             { tags: { $in: [query] } }
-          ],
-          isActive: true
+          ]
         }
       },
       {
@@ -568,7 +555,6 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
           name: { $first: '$name' },
           description: { $first: '$description' },
           category: { $first: '$category' },
-          subCategory: { $first: '$subCategory' },
           brand: { $first: '$brand' },
           images: { $first: '$images' },
           tags: { $first: '$tags' },
@@ -616,11 +602,9 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
           name: 1,
           description: 1,
           category: 1,
-          subCategory: 1,
           brand: 1,
           images: 1,
           tags: 1,
-          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
           minPrice: 1,
@@ -688,8 +672,7 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
         $match: {
           'vendorProducts.status': 'approved',
           'vendorProducts.isFeatured': true,
-          'vendorProducts.isActive': true,
-          isActive: true
+          'vendorProducts.isActive': true
         }
       },
       {
@@ -701,7 +684,6 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
           name: { $first: '$name' },
           description: { $first: '$description' },
           category: { $first: '$category' },
-          subCategory: { $first: '$subCategory' },
           brand: { $first: '$brand' },
           images: { $first: '$images' },
           tags: { $first: '$tags' },
@@ -749,11 +731,9 @@ export const getFeaturedProducts = async (req: Request, res: Response): Promise<
           name: 1,
           description: 1,
           category: 1,
-          subCategory: 1,
           brand: 1,
           images: 1,
           tags: 1,
-          isActive: 1,
           createdAt: 1,
           updatedAt: 1,
           minPrice: 1,

@@ -315,7 +315,6 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
           name: 1,
           description: 1,
           images: 1,
-          tags: 1,
           isActive: 1,
           createdAt: 1,
           updatedAt: 1,
@@ -388,9 +387,7 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
           _id: 1,
           name: 1,
           description: 1,
-          subCategory: 1,
           images: 1,
-          tags: 1,
           isActive: 1,
           createdAt: 1,
           updatedAt: 1,
@@ -490,14 +487,13 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       name, 
       description, 
       category, 
-      subCategory, 
       brand, 
-      tags,
       price, 
       stock, 
       sku, 
       globalProductId, 
-      globalProductName 
+      globalProductName,
+      isActive 
     } = req.body;
     
     let product;
@@ -569,7 +565,6 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         category,
         brand,
         images: processedImages,
-        tags,
         isActive: true,
         globalProduct: globalProductId
       };
@@ -646,9 +641,6 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       let globalProduct = await GlobalProduct.findOne({ name: globalProductName }).session(session);
       console.log("case 4 runned")
       if (globalProduct) {
-        // Global product already exists, use it instead of creating a new one
-        // Create new product
-        // Check if category exists and is active
         const categoryDoc = await Category.findById(category).session(session);
         if (!categoryDoc) {
           await session.abortTransaction();
@@ -669,10 +661,8 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
           name,
           description,
           category,
-          subCategory,
           brand,
           images: processedImages,
-          tags,
           isActive: true
         };
         
@@ -712,10 +702,8 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
           name,
           description,
           category,
-          subCategory,
           brand,
           images: processedImages,
-          tags,
           isActive: true
         };
         
@@ -771,7 +759,8 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       price: price || 0, // Default to 0 if not provided
       stock: stock || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
-      status: 'approved' // Approved by default since admin is adding it
+      status: 'approved', // Approved by default since admin is adding it
+      isActive: isActive !== undefined ? isActive : true // Use provided isActive or default to true
     });
     
     await vendorProduct.save({ session });
@@ -811,8 +800,6 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       
       res.status(409).json({ 
         message: errorMessage,
-        // Optionally include the duplicate values for debugging (in development)
-        // duplicateValues: duplicateValues
       });
     } else {
       // Handle other errors
@@ -934,7 +921,6 @@ export const getAdminUploadedProducts = async (req: Request, res: Response): Pro
             name: 1,
             description: 1,
             images: 1,
-            tags: 1,
             isActive: 1,
             createdAt: 1,
             updatedAt: 1
@@ -985,13 +971,14 @@ export const updateAdminUploadedProducts = async (req: Request, res: Response): 
     }
     
     // Update the vendor product fields
-    const { price, stock, sku, status, isFeatured } = req.body;
+    const { price, stock, sku, status, isFeatured, isActive } = req.body;
     
     if (price !== undefined) vendorProduct.price = price;
     if (stock !== undefined) vendorProduct.stock = stock;
     if (sku !== undefined) vendorProduct.sku = sku;
     if (status !== undefined) vendorProduct.status = status;
     if (isFeatured !== undefined) vendorProduct.isFeatured = isFeatured;
+    if (isActive !== undefined) vendorProduct.isActive = isActive;
     
     await vendorProduct.save();
     
@@ -1171,7 +1158,6 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
             name: 1,
             description: 1,
             images: 1,
-            tags: 1,
             isActive: 1,
             createdAt: 1,
             updatedAt: 1,
@@ -1206,11 +1192,16 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
 // Update vendor product status (approve/reject)
 export const updateVendorProductStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { status } = req.body;
+    const { status, isActive } = req.body;
+    
+    // Prepare update object
+    const updateFields: any = {};
+    if (status !== undefined) updateFields.status = status;
+    if (isActive !== undefined) updateFields.isActive = isActive;
     
     const vendorProduct = await VendorProduct.findByIdAndUpdate(
       req.params.id,
-      { status },
+      updateFields,
       { new: true }
     );
     

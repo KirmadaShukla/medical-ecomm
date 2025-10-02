@@ -6,19 +6,15 @@ export interface IProductImage {
   url: string;
   publicId: string; // Cloudinary public ID
   alt?: string;
-  isPrimary?: boolean;
 }
 
 export interface IProduct extends Document {
   name: string;
   description?: string;
   category: mongoose.Types.ObjectId; // Reference to Category model
-  subCategory?: mongoose.Types.ObjectId; // Reference to Category model (optional)
   brand?: mongoose.Types.ObjectId; // Reference to Brand model
   globalProduct?: mongoose.Types.ObjectId; // Reference to GlobalProduct model
   images: IProductImage[];
-  tags?: string[];
-  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,10 +40,6 @@ const ProductSchema: Schema = new Schema({
     ref: 'Category', 
     required: true
   },
-  subCategory: { 
-    type: Schema.Types.ObjectId, 
-    ref: 'Category'
-  },
   brand: { 
     type: Schema.Types.ObjectId, 
     ref: 'Brand'
@@ -66,17 +58,7 @@ const ProductSchema: Schema = new Schema({
       required: true 
     },
     alt: { type: String },
-    isPrimary: { type: Boolean, default: false }
-  }],
-  tags: [{
-    type: String,
-    trim: true,
-    lowercase: true
-  }],
-  isActive: {
-    type: Boolean,
-    default: true
-  }
+  }]
 }, {
   timestamps: true
 });
@@ -88,7 +70,7 @@ ProductSchema.plugin(aggregatePaginate);
 // Index for better query performance
 ProductSchema.index({ name: 'text', description: 'text' });
 ProductSchema.index({ category: 1 });
-ProductSchema.index({ isActive: 1 });
+
 ProductSchema.index({ globalProduct: 1 });
 
 const Product = mongoose.model<IProduct, IProductModel>('Product', ProductSchema);

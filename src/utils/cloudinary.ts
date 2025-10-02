@@ -1,12 +1,14 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Configure Cloudinary when needed
+const configureCloudinary = () => {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+};
 
 /**
  * Uploads a file to Cloudinary
@@ -20,6 +22,9 @@ export const uploadToCloudinary = async (
   folder: string = 'products',
   publicId?: string
 ): Promise<{ url: string; publicId: string }> => {
+  // Configure Cloudinary before use
+  configureCloudinary();
+  
   return new Promise((resolve, reject) => {
     const uploadOptions: any = {
       folder,
@@ -63,6 +68,9 @@ export const uploadToCloudinary = async (
  * @returns Promise with the deletion result
  */
 export const deleteFromCloudinary = async (publicId: string): Promise<void> => {
+  // Configure Cloudinary before use
+  configureCloudinary();
+  
   return new Promise((resolve, reject) => {
     cloudinary.uploader.destroy(publicId, (error, result) => {
       if (error) {

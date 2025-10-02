@@ -6,7 +6,6 @@ export interface IVendorProductImage {
   url: string;
   publicId: string; // Cloudinary public ID
   alt?: string;
-  isPrimary?: boolean;
 }
 
 export interface IVendorProduct extends Document {
@@ -18,6 +17,7 @@ export interface IVendorProduct extends Document {
   sku: string; // Vendor-specific SKU
   status: 'pending' | 'approved' | 'rejected';
   isFeatured: boolean;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
