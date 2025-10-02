@@ -480,7 +480,7 @@ const handleGlobalProduct = async (product: any, globalProductId?: string, globa
 export const addProduct = async (req: Request, res: Response): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  
+  console.log(req.body)
   try {
     const { 
       productId, // If provided, it's an existing product
@@ -578,8 +578,8 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
         await globalProduct.save({ session });
       }
-    } else if (productId && !globalProductId) {
-      // Case 2 & 3: Product ID exists but global product ID doesn't exist (Case 2) or both exist (Case 3)
+    } else if (productId) {
+      // Case 2 & 3: Product ID exists (either with or without global product ID)
       // Existing product
       product = await Product.findById(productId).session(session);
       if (!product) {
@@ -603,7 +603,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       }
       
       // Handle global product association if globalProductName is provided
-      if (globalProductName) {
+      if (globalProductName && !globalProductId) {
         // Case 2: Product exists but global product ID doesn't exist, global product name is provided
         // Create a new global product and associate it with the existing product
         const globalProduct = new GlobalProduct({
