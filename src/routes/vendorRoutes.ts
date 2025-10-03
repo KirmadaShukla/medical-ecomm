@@ -17,10 +17,9 @@ const router = Router();
 
 // Public vendor routes
 router.post('/login', vendorLogin);
-
 router.post('/register', registerVendor);
-// Protected vendor routes
-router.get('/token', isAuthenticated, isVendor, sendVendorToken);
+// This should be a public route for token verification
+router.get('/token', sendVendorToken);
 
 // Apply authentication middleware to all vendor routes
 router.use(isAuthenticated, isVendor);
