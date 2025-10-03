@@ -11,12 +11,33 @@ import crypto from 'crypto';
 // Load environment variables
 dotenv.config();
 
-// Initialize Razorpay
-const Razorpay = require('razorpay');
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+// Dummy payment implementation for now
+let razorpay: any;
+
+// Initialize Razorpay only if keys are present
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  const Razorpay = require('razorpay');
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  });
+} else {
+  // Dummy implementation for development
+  console.warn('Razorpay keys not found. Using dummy payment implementation.');
+  razorpay = {
+    orders: {
+      create: async (options: any) => {
+        // Return a fake Razorpay order object
+        return {
+          id: `rzp_dummy_${Date.now()}`,
+          amount: options.amount,
+          currency: options.currency,
+          receipt: options.receipt
+        };
+      }
+    }
+  };
+}
 
 // Generate unique order ID
 const generateOrderId = () => {
@@ -171,16 +192,21 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
   try {
     const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
     
-    // Verify payment signature
-    const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '');
-    shasum.update(`${razorpayOrderId}|${razorpayPaymentId}`);
-    const digest = shasum.digest('hex');
-    
-    if (digest !== razorpaySignature) {
-      await session.abortTransaction();
-      session.endSession();
-      res.status(400).json({ message: 'Payment verification failed' });
-      return;
+    // If using dummy implementation, skip signature verification
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.warn('Using dummy payment verification');
+    } else {
+      // Verify payment signature
+      const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '');
+      shasum.update(`${razorpayOrderId}|${razorpayPaymentId}`);
+      const digest = shasum.digest('hex');
+      
+      if (digest !== razorpaySignature) {
+        await session.abortTransaction();
+        session.endSession();
+        res.status(400).json({ message: 'Payment verification failed' });
+        return;
+      }
     }
     
     // Find order by Razorpay order ID

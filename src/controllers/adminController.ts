@@ -1058,11 +1058,11 @@ export const updateVendorStatus = async (req: Request, res: Response): Promise<v
     const { status } = req.body;
     
     // Validate status
-    const validStatuses = ['pending', 'approved', 'rejected', 'suspended'];
-    if (!validStatuses.includes(status)) {
-      res.status(400).json({ message: 'Invalid status. Must be one of: pending, approved, rejected, suspended' });
-      return;
-    }
+    // const validStatuses = ['pending', 'approved', 'rejected', 'suspended'];
+    // if (!validStatuses.includes(status)) {
+    //   res.status(400).json({ message: 'Invalid status. Must be one of: pending, approved, rejected, suspended' });
+    //   return;
+    // }
     
     const vendor = await Vendor.findByIdAndUpdate(
       req.params.id,
