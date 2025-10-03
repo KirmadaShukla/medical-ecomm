@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { inspect } from 'util';
 import Category from '../models/category';
 import Brand from '../models/brand';
 import Product from '../models/product';
@@ -1055,14 +1056,51 @@ export const getVendorById = async (req: Request, res: Response): Promise<void> 
 // Update vendor status (approve/reject/suspend)
 export const updateVendorStatus = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('=== VENDOR STATUS UPDATE DEBUG INFO ===');
+    console.log('Request body:', req.body);
+    console.log('Request body type:', typeof req.body);
+    console.log('Request body keys:', Object.keys(req.body));
+    console.log('Request body length:', Object.keys(req.body).length);
+    console.log('Request params:', req.params);
+    console.log('Request param id:', req.params.id);
+    console.log('Content-Type header:', req.headers['content-type']);
+    console.log('All headers:', req.headers);
+    console.log('Method:', req.method);
+    console.log('URL:', req.url);
+    console.log('Raw request dump:', inspect(req, { depth: 1, colors: false }));
+    
+    // Check if body exists and is properly parsed
+    if (!req.body || Object.keys(req.body).length === 0) {
+      res.status(400).json({ 
+        message: 'Request body is required and must contain status field',
+        receivedBody: req.body,
+        receivedHeaders: req.headers,
+        method: req.method,
+        url: req.url,
+        params: req.params
+      });
+      return;
+    }
+    
     const { status } = req.body;
     
     // Validate status
-    // const validStatuses = ['pending', 'approved', 'rejected', 'suspended'];
-    // if (!validStatuses.includes(status)) {
-    //   res.status(400).json({ message: 'Invalid status. Must be one of: pending, approved, rejected, suspended' });
-    //   return;
-    // }
+    const validStatuses = ['pending', 'approved', 'rejected', 'suspended'];
+    if (!status) {
+      res.status(400).json({ 
+        message: 'Status is required',
+        receivedBody: req.body
+      });
+      return;
+    }
+    
+    if (!validStatuses.includes(status)) {
+      res.status(400).json({ 
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+        receivedStatus: status
+      });
+      return;
+    }
     
     const vendor = await Vendor.findByIdAndUpdate(
       req.params.id,
@@ -1076,11 +1114,15 @@ export const updateVendorStatus = async (req: Request, res: Response): Promise<v
     }
     
     res.status(200).json({ 
-      message: `Vendor ${status} successfully`, 
+      message: `Vendor status updated to ${status} successfully`, 
       vendor 
     });
   } catch (error) {
-    res.status(400).json({ message: 'Error updating vendor status', error });
+    console.error('Error updating vendor status:', error);
+    res.status(500).json({ 
+      message: 'Error updating vendor status', 
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 };
 

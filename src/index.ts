@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config();
 import morgan from 'morgan';
 import fileUpload from 'express-fileupload';
 import userRoutes from './routes/userRoutes';
@@ -14,25 +15,30 @@ import wishlistRoutes from './routes/wishlistRoutes';
 import orderRoutes from './routes/orderRoutes';
 import { connectDB } from './config/database';
 import { globalErrorHandler } from './middleware/error';
-
 // Load environment variables
-dotenv.config();
 
 // Connect to database
 connectDB();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT =  3002;
 
 // Middleware
 app.use(cors({
-  origin: "*",
+  origin: ["http://localhost:3000", "https://medical-ecomm.vercel.app/"],
   credentials: true
 }));
-app.use(express.json());
 app.use(morgan('combined')); // Add Morgan middleware for logging
+// Body parsing middleware should come before file upload
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(fileUpload({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  // Preserve JSON body parsing for non-file requests
+  preserveExtension: true,
+  parseNested: true,
+  defCharset: 'utf8',
+  defParamCharset: 'utf8'
 }));
 
 // Routes
