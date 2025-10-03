@@ -30,7 +30,6 @@ export const getGlobalProducts = async (req: Request, res: Response): Promise<vo
         $project: {
           _id: 1,
           name: 1,
-          productIds: 1,
           isActive: 1,
           createdAt: 1,
           updatedAt: 1
