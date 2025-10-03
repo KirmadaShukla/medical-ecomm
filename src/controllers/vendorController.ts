@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import Product from '../models/product';
 import VendorProduct from '../models/vendorProduct';
 import Category from '../models/category';
@@ -130,25 +131,51 @@ export const vendorLogin = async (req: Request, res: Response): Promise<void> =>
 // Send vendor token
 export const sendVendorToken = async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({ message: 'User not authenticated' });
+    // Get token from header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ message: 'Authentication required' });
       return;
     }
     
-    // Check if user is vendor
-    if (req.user.role !== 'vendor') {
-      res.status(403).json({ message: 'Access denied. Vendors only.' });
+    const token = authHeader.split(' ')[1];
+    
+    // Verify token
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    
+    // Check if this is a vendor token
+    if (decoded.role !== 'vendor') {
+      res.status(401).json({ message: 'Invalid token: Not a vendor token' });
       return;
     }
     
-    // Generate vendor token
-    const token = generateVendorToken(req.user);
+    // Find vendor in database
+    const vendor = await Vendor.findById(decoded.id);
+    if (!vendor || vendor.status !== 'approved') {
+      // Check if vendor is pending approval
+      if (vendor && vendor.status === 'pending') {
+        res.status(401).json({ message: 'Please wait for approval from admin side' });
+        return;
+      } else if (vendor && vendor.status === 'rejected') {
+        res.status(401).json({ message: 'Your vendor application has been rejected. Please contact support.' });
+        return;
+      } else if (vendor && vendor.status === 'suspended') {
+        res.status(401).json({ message: 'Your vendor account has been suspended. Please contact support.' });
+        return;
+      }
+      res.status(401).json({ message: 'Vendor not found or not approved' });
+      return;
+    }
+    
+    // Generate a new vendor token
+    const newToken = generateVendorToken(vendor);
     
     res.status(200).json({
-      token
+      token: newToken
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error generating vendor token', error });
+    res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
 
