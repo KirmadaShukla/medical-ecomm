@@ -46,15 +46,15 @@ router.post('/login', adminLogin);
 router.get('/token', isAuthenticated, isAdmin, sendAdminToken);
 
 // Category routes
-router.get('/categories', isAuthenticated, isAdmin, getCategories);
-router.get('/categories/:id', isAuthenticated, isAdmin, getCategoryById);
+router.get('/categories', getCategories);
+router.get('/categories/:id', getCategoryById);
 router.post('/categories', isAuthenticated, isAdmin, createCategory);
 router.put('/categories/:id', isAuthenticated, isAdmin, updateCategory);
 router.delete('/categories/:id', isAuthenticated, isAdmin, deleteCategory);
 
 // Brand routes
-router.get('/brands', isAuthenticated, isAdmin, getBrands);
-router.get('/brands/:id', isAuthenticated, isAdmin, getBrandById);
+router.get('/brands', getBrands);
+router.get('/brands/:id', getBrandById);
 router.post('/brands', isAuthenticated, isAdmin, createBrand);
 router.put('/brands/:id', isAuthenticated, isAdmin, updateBrand);
 router.delete('/brands/:id', isAuthenticated, isAdmin, deleteBrand);
