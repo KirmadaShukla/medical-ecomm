@@ -25,7 +25,7 @@ const PORT =  3002;
 
 // Middleware
 app.use(cors({
-  origin: ["http://localhost:3000", "https://medical-ecomm.vercel.app/"],
+  origin:"*",
   credentials: true
 }));
 app.use(morgan('combined')); // Add Morgan middleware for logging
