@@ -18,6 +18,7 @@ export interface IVendor extends Document {
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
   totalSales?: number;
   totalProducts?: number;
+  lastPaymentDate?: Date;
   comparePassword: (candidatePassword: string) => Promise<boolean>;
   createdAt: Date;
   updatedAt: Date;
@@ -77,6 +78,9 @@ const VendorSchema: Schema = new Schema({
   totalProducts: { 
     type: Number, 
     default: 0 
+  },
+  lastPaymentDate: { 
+    type: Date 
   }
 }, {
   timestamps: true

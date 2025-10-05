@@ -33,6 +33,11 @@ import {
   getVendors,
   getVendorById,
   updateVendorStatus,
+  // Payment routes
+  getVendorSales,
+  generateVendorPayment,
+  processVendorPayment,
+  getVendorPayments
 } from '../controllers/adminController';
 import { isAuthenticated, isAdmin } from '../middleware/auth';
 
@@ -78,5 +83,11 @@ router.put('/vendor-products/:id/status', isAuthenticated, isAdmin, updateVendor
 router.get('/vendors', isAuthenticated, isAdmin, getVendors);
 router.get('/vendors/:id', isAuthenticated, isAdmin, getVendorById);
 router.put('/vendors/:id/status', isAuthenticated, isAdmin, updateVendorStatus);
+
+// Vendor payment routes
+router.get('/vendor-sales', isAuthenticated, isAdmin, getVendorSales);
+router.post('/vendor-payments/generate', isAuthenticated, isAdmin, generateVendorPayment);
+router.put('/vendor-payments/process', isAuthenticated, isAdmin, processVendorPayment);
+router.get('/vendor-payments', isAuthenticated, isAdmin, getVendorPayments);
 
 export default router;

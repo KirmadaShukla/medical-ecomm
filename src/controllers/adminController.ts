@@ -8,6 +8,8 @@ import Admin from '../models/admin';
 import Vendor from '../models/vendors';
 import User, { UserRole, UserStatus } from '../models/User';
 import GlobalProduct from '../models/globalProduct';
+import VendorPayment from '../models/vendorPayment';
+import Order from '../models/order';
 import { generateAdminToken } from '../utils/tokenUtils';
 import { AppError } from '../utils/errorHandler';
 import { uploadProductImages } from '../utils/cloudinary';
@@ -1300,5 +1302,275 @@ export const deleteProductImage = async (req: Request, res: Response): Promise<v
     });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting product image', error });
+  }
+};
+
+// ==================== VENDOR PAYMENT MANAGEMENT ====================
+
+// Get vendor sales data for a specific period
+export const getVendorSales = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { vendorId, startDate, endDate } = req.query;
+    
+    // Validate vendor ID
+    if (!vendorId || !mongoose.Types.ObjectId.isValid(vendorId as string)) {
+      res.status(400).json({ message: 'Valid vendor ID is required' });
+      return;
+    }
+    
+    // Parse dates
+    const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
+    const end = endDate ? new Date(endDate as string) : new Date();
+    
+    // Validate date range
+    if (start > end) {
+      res.status(400).json({ message: 'Start date must be before end date' });
+      return;
+    }
+    
+    // Find the vendor
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      res.status(404).json({ message: 'Vendor not found' });
+      return;
+    }
+    
+    // Get all vendor products for this vendor
+    const vendorProducts = await VendorProduct.find({ vendorId: vendorId });
+    const vendorProductIds = vendorProducts.map(vp => vp._id);
+    
+    // Find orders containing these vendor products within the date range
+    const orders = await Order.find({
+      'vendorProducts.vendorProductId': { $in: vendorProductIds },
+      createdAt: { $gte: start, $lte: end },
+      paymentStatus: 'completed'
+    });
+    
+    // Calculate total sales
+    let totalSales = 0;
+    let totalOrders = 0;
+    const salesByProduct: any = {};
+    
+    orders.forEach(order => {
+      totalOrders++;
+      order.vendorProducts.forEach(item => {
+        if (vendorProductIds.includes(item.vendorProductId)) {
+          const itemTotal = item.price * item.quantity;
+          totalSales += itemTotal;
+          
+          // Track sales by product
+          if (!salesByProduct[item.productName]) {
+            salesByProduct[item.productName] = {
+              quantity: 0,
+              sales: 0
+            };
+          }
+          salesByProduct[item.productName].quantity += item.quantity;
+          salesByProduct[item.productName].sales += itemTotal;
+        }
+      });
+    });
+    
+    res.status(200).json({
+      vendor: {
+        id: vendor._id,
+        businessName: vendor.businessName,
+        businessEmail: vendor.businessEmail
+      },
+      period: {
+        start,
+        end
+      },
+      totalSales,
+      totalOrders,
+      salesByProduct
+    });
+  } catch (error) {
+    console.error('Error fetching vendor sales:', error);
+    res.status(500).json({ message: 'Error fetching vendor sales', error });
+  }
+};
+
+// Generate payment for a vendor based on their sales
+export const generateVendorPayment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { vendorId, startDate, endDate, notes } = req.body;
+    
+    // Validate required fields
+    if (!vendorId || !mongoose.Types.ObjectId.isValid(vendorId)) {
+      res.status(400).json({ message: 'Valid vendor ID is required' });
+      return;
+    }
+    
+    if (!startDate || !endDate) {
+      res.status(400).json({ message: 'Start date and end date are required' });
+      return;
+    }
+    
+    // Parse dates
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Validate date range
+    if (start > end) {
+      res.status(400).json({ message: 'Start date must be before end date' });
+      return;
+    }
+    
+    // Find the vendor
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      res.status(404).json({ message: 'Vendor not found' });
+      return;
+    }
+    
+    // Get vendor sales for the period
+    const vendorProducts = await VendorProduct.find({ vendorId: vendorId });
+    const vendorProductIds = vendorProducts.map(vp => vp._id);
+    
+    const orders = await Order.find({
+      'vendorProducts.vendorProductId': { $in: vendorProductIds },
+      createdAt: { $gte: start, $lte: end },
+      paymentStatus: 'completed'
+    });
+    
+    // Calculate total sales
+    let totalSales = 0;
+    orders.forEach(order => {
+      order.vendorProducts.forEach(item => {
+        if (vendorProductIds.includes(item.vendorProductId)) {
+          totalSales += item.price * item.quantity;
+        }
+      });
+    });
+    
+    // Calculate payment amount (could be a percentage of sales or fixed amount)
+    // For now, we'll use 80% of total sales as the payment to vendor
+    const paymentAmount = totalSales * 0.8;
+    
+    // Create vendor payment record
+    const vendorPayment = new VendorPayment({
+      vendor: vendorId,
+      amount: paymentAmount,
+      periodStart: start,
+      periodEnd: end,
+      status: 'pending',
+      notes
+    });
+    
+    await vendorPayment.save();
+    
+    res.status(201).json({
+      message: 'Vendor payment generated successfully',
+      payment: vendorPayment,
+      sales: {
+        totalSales,
+        paymentAmount
+      }
+    });
+  } catch (error) {
+    console.error('Error generating vendor payment:', error);
+    res.status(500).json({ message: 'Error generating vendor payment', error });
+  }
+};
+
+// Process vendor payment (mark as completed)
+export const processVendorPayment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { paymentId, transactionId } = req.body;
+    
+    // Validate payment ID
+    if (!paymentId || !mongoose.Types.ObjectId.isValid(paymentId)) {
+      res.status(400).json({ message: 'Valid payment ID is required' });
+      return;
+    }
+    
+    // Find the payment
+    const vendorPayment = await VendorPayment.findById(paymentId);
+    if (!vendorPayment) {
+      res.status(404).json({ message: 'Vendor payment not found' });
+      return;
+    }
+    
+    // Update payment status
+    vendorPayment.status = 'completed';
+    vendorPayment.paymentDate = new Date();
+    if (transactionId) {
+      vendorPayment.transactionId = transactionId;
+    }
+    
+    // Update vendor's last payment date
+    const vendor = await Vendor.findById(vendorPayment.vendor);
+    if (vendor) {
+      vendor.lastPaymentDate = new Date();
+      await vendor.save();
+    }
+    
+    await vendorPayment.save();
+    
+    res.status(200).json({
+      message: 'Vendor payment processed successfully',
+      payment: vendorPayment
+    });
+  } catch (error) {
+    console.error('Error processing vendor payment:', error);
+    res.status(500).json({ message: 'Error processing vendor payment', error });
+  }
+};
+
+// Get all vendor payments
+export const getVendorPayments = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { vendorId, status } = req.query;
+    
+    // Build query
+    const query: any = {};
+    if (vendorId && mongoose.Types.ObjectId.isValid(vendorId as string)) {
+      query.vendor = vendorId;
+    }
+    if (status) {
+      query.status = status;
+    }
+    
+    // Get vendor payments with vendor details
+    const vendorPayments = await VendorPayment.aggregate([
+      { $match: query },
+      {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendor',
+          foreignField: '_id',
+          as: 'vendorDetails'
+        }
+      },
+      {
+        $unwind: '$vendorDetails'
+      },
+      {
+        $project: {
+          _id: 1,
+          vendor: 1,
+          amount: 1,
+          periodStart: 1,
+          periodEnd: 1,
+          paymentDate: 1,
+          status: 1,
+          transactionId: 1,
+          notes: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          vendorDetails: {
+            businessName: 1,
+            businessEmail: 1
+          }
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ]);
+    
+    res.status(200).json(vendorPayments);
+  } catch (error) {
+    console.error('Error fetching vendor payments:', error);
+    res.status(500).json({ message: 'Error fetching vendor payments', error });
   }
 };
