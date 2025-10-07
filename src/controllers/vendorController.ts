@@ -179,70 +179,6 @@ export const sendVendorToken = async (req: Request, res: Response): Promise<void
   }
 };
 
-// ==================== PRODUCTS ====================
-
-// Helper function to handle global product logic
-const handleGlobalProduct = async (product: any, globalProductId?: string, globalProductName?: string, session?: any) => {
-  let globalProduct;
-  
-  if (globalProductId && !product) {
-    // Case 1: Global product ID exists but product doesn't exist
-    // Create a new product and associate it with the existing global product
-    globalProduct = await GlobalProduct.findById(globalProductId).session(session || undefined);
-    if (globalProduct) {
-      // Create a new product since it doesn't exist
-      // This case should be handled in the main function where product creation happens
-      // Here we just return the global product for reference
-      return globalProduct;
-    }
-  } else if (!globalProductId && product && globalProductName) {
-    // Case 2: Product exists but global product ID doesn't exist, global product name is provided
-    // Create a new global product and associate it with the existing product
-    globalProduct = new GlobalProduct({
-      name: globalProductName,
-      productIds: [product._id as mongoose.Types.ObjectId],
-      isActive: true
-    });
-    
-    await globalProduct.save({ session });
-    
-    // Set the global product reference on the product
-    product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-    await product.save({ session });
-  } else if (globalProductId && product) {
-    // Case 3: Both global product ID and product exist
-    // Associate them if not already associated
-    globalProduct = await GlobalProduct.findById(globalProductId).session(session || undefined);
-    if (globalProduct) {
-      // Add product to global product if not already there
-      const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
-      if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
-        globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
-        await globalProduct.save({ session });
-      }
-      // Set the global product reference on the product if not already set
-      if (!product.globalProduct) {
-        product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-        await product.save({ session });
-      }
-    }
-  } else if (!globalProductId && !product && globalProductName) {
-    // Case 4: Neither global product ID nor product exist, but global product name is provided
-    // Create both new product and new global product
-    globalProduct = new GlobalProduct({
-      name: globalProductName,
-      productIds: [], // Will be populated after product creation
-      isActive: true
-    });
-    
-    await globalProduct.save({ session });
-    // Product will be created in the main function and then associated
-    return globalProduct;
-  }
-  
-  return globalProduct;
-};
-
 // Unified function to add products (both new and existing) - for vendors
 export const addProduct = async (req: Request, res: Response): Promise<void> => {
   const session = await mongoose.startSession();
@@ -636,13 +572,11 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
       {
         $project: {
           _id: 1,
-          productId: 1,
           vendorId: 1,
           price: 1,
           stock: 1,
           sku: 1,
           status: 1,
-          isFeatured: 1,
           isActive: 1,
           createdAt: 1,
           updatedAt: 1,
@@ -652,8 +586,6 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
             description: 1,
             images: 1,
             isActive: 1,
-            createdAt: 1,
-            updatedAt: 1,
             categoryDetails: {
               _id: 1,
               name: 1

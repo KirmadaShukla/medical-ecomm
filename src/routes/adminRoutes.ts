@@ -37,13 +37,7 @@ import {
   getVendorSales,
   generateVendorPayment,
   processVendorPayment,
-  getVendorPayments,
-  // Banner routes
-  getBanners,
-  getBannerById,
-  createBanner,
-  updateBanner,
-  deleteBanner
+  getVendorPayments
 } from '../controllers/adminController';
 import { isAuthenticated, isAdmin } from '../middleware/auth';
 
@@ -95,12 +89,5 @@ router.get('/vendor-sales', isAuthenticated, isAdmin, getVendorSales);
 router.post('/vendor-payments/generate', isAuthenticated, isAdmin, generateVendorPayment);
 router.put('/vendor-payments/process', isAuthenticated, isAdmin, processVendorPayment);
 router.get('/vendor-payments', isAuthenticated, isAdmin, getVendorPayments);
-
-// Banner management routes
-router.get('/banners', isAuthenticated, isAdmin, getBanners);
-router.get('/banners/:id', isAuthenticated, isAdmin, getBannerById);
-router.post('/banners', isAuthenticated, isAdmin, createBanner);
-router.put('/banners/:id', isAuthenticated, isAdmin, updateBanner);
-router.delete('/banners/:id', isAuthenticated, isAdmin, deleteBanner);
 
 export default router;

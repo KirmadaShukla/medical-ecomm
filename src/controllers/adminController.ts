@@ -916,7 +916,6 @@ export const getAdminUploadedProducts = async (req: Request, res: Response): Pro
           stock: 1,
           sku: 1,
           status: 1,
-          isFeatured: 1,
           createdAt: 1,
           updatedAt: 1,
           productDetails: {
@@ -984,12 +983,7 @@ export const updateAdminUploadedProducts = async (req: Request, res: Response): 
     if (isActive !== undefined) vendorProduct.isActive = isActive;
     
     await vendorProduct.save();
-    
-    // Note: Only vendor-specific information (price, stock, SKU, status) is updated here
-    // Core product information (name, description, etc.) is shared across all vendors
-    // To update core product information, use the separate product update endpoint
-    // This ensures each vendor can maintain their own pricing and stock while sharing product details
-    
+
     res.status(200).json({ 
       message: 'Vendor product information updated successfully. Only vendor-specific details (price, stock, SKU, status) can be updated here. To update core product information (name, description, etc.) that is shared across all vendors, use the main product update endpoint.',
       vendorProduct 
@@ -1184,13 +1178,9 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
       {
         $project: {
           _id: 1,
-          productId: 1,
           vendorId: 1,
           price: 1,
-          comparePrice: 1,
           stock: 1,
-          reservedStock: 1,
-          soldQuantity: 1,
           sku: 1,
           status: 1,
           isFeatured: 1,
@@ -1214,7 +1204,11 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
               name: 1
             }
           },
-          vendorDetails: 1,
+          vendorDetails: {
+            businessEmail: 1,
+            status: 1,
+            phone: 1
+          },
           categoryDetails: {
             _id: 1,
             name: 1
