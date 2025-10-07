@@ -13,6 +13,7 @@ import globalProductSearchRoutes from './routes/globalProductSearchRoutes';
 import cartRoutes from './routes/cartRoutes';
 import wishlistRoutes from './routes/wishlistRoutes';
 import orderRoutes from './routes/orderRoutes';
+import bannerRoutes from './routes/bannerRoutes';
 import { connectDB } from './config/database';
 import { globalErrorHandler } from './middleware/error';
 // Load environment variables
@@ -51,6 +52,7 @@ app.use('/api/v1/global-product-search', globalProductSearchRoutes);
 app.use('/api/v1/cart', cartRoutes);
 app.use('/api/v1/wishlist', wishlistRoutes);
 app.use('/api/v1/orders', orderRoutes);
+app.use('/api/v1/banners', bannerRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

@@ -2,9 +2,6 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Order from '../models/order';
 import VendorProduct from '../models/vendorProduct';
-import Product from '../models/product';
-import User from '../models/User';
-import Vendor from '../models/vendors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 
@@ -55,15 +52,13 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
     const { vendorProducts, shippingAddress, billingAddress, notes } = req.body;
     const userId = req.user?._id;
     
-    // Validate user
     if (!userId) {
       await session.abortTransaction();
       session.endSession();
       res.status(401).json({ message: 'User not authenticated' });
       return;
     }
-    
-    // Validate vendor products
+     
     if (!vendorProducts || !Array.isArray(vendorProducts) || vendorProducts.length === 0) {
       await session.abortTransaction();
       session.endSession();
@@ -71,7 +66,6 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       return;
     }
     
-    // Validate shipping address
     if (!shippingAddress) {
       await session.abortTransaction();
       session.endSession();
@@ -79,7 +73,6 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       return;
     }
     
-    // Fetch vendor products with product details
     const vendorProductIds = vendorProducts.map((item: any) => item.vendorProductId);
     const vendorProductDocs = await VendorProduct.find({
       _id: { $in: vendorProductIds },
@@ -87,7 +80,6 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       isActive: true
     }).populate('productId');
     
-    // Validate if all vendor products exist and are available
     const orderItems: any[] = [];
     let totalAmount = 0;
     
@@ -105,7 +97,6 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
         return;
       }
       
-      // Check stock availability
       if (vendorProductDoc.stock < item.quantity) {
         await session.abortTransaction();
         session.endSession();
