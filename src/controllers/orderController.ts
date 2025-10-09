@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import Order from '../models/order';
 import VendorProduct from '../models/vendorProduct';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import { catchAsyncError, AppError } from '../utils/errorHandler';
 
 // Load environment variables
 dotenv.config();
@@ -44,7 +45,7 @@ const generateOrderId = () => {
 };
 
 // Create order
-export const createOrder = async (req: Request, res: Response): Promise<void> => {
+export const createOrder = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
@@ -55,22 +56,19 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
     if (!userId) {
       await session.abortTransaction();
       session.endSession();
-      res.status(401).json({ message: 'User not authenticated' });
-      return;
+      return next(new AppError('User not authenticated', 401));
     }
      
     if (!vendorProducts || !Array.isArray(vendorProducts) || vendorProducts.length === 0) {
       await session.abortTransaction();
       session.endSession();
-      res.status(400).json({ message: 'Vendor products are required' });
-      return;
+      return next(new AppError('Vendor products are required', 400));
     }
     
     if (!shippingAddress) {
       await session.abortTransaction();
       session.endSession();
-      res.status(400).json({ message: 'Shipping address is required' });
-      return;
+      return next(new AppError('Shipping address is required', 400));
     }
     
     const vendorProductIds = vendorProducts.map((item: any) => item.vendorProductId);
@@ -91,19 +89,13 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       if (!vendorProductDoc) {
         await session.abortTransaction();
         session.endSession();
-        res.status(404).json({ 
-          message: `Vendor product with ID ${item.vendorProductId} not found or not available` 
-        });
-        return;
+        return next(new AppError(`Vendor product with ID ${item.vendorProductId} not found or not available`, 404));
       }
       
       if (vendorProductDoc.stock < item.quantity) {
         await session.abortTransaction();
         session.endSession();
-        res.status(400).json({ 
-          message: `Insufficient stock for ${(vendorProductDoc as any).productId.name}. Available: ${vendorProductDoc.stock}` 
-        });
-        return;
+        return next(new AppError(`Insufficient stock for ${(vendorProductDoc as any).productId.name}. Available: ${vendorProductDoc.stock}`, 400));
       }
       
       // Calculate item total
@@ -168,15 +160,12 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
     session.endSession();
     
     console.error('Error creating order:', error);
-    res.status(500).json({ 
-      message: 'Error creating order', 
-      error: error.message || error 
-    });
+    return next(new AppError('Error creating order', 500));
   }
-};
+});
 
 // Verify Razorpay payment
-export const verifyPayment = async (req: Request, res: Response): Promise<void> => {
+export const verifyPayment = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
@@ -195,8 +184,7 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
       if (digest !== razorpaySignature) {
         await session.abortTransaction();
         session.endSession();
-        res.status(400).json({ message: 'Payment verification failed' });
-        return;
+        return next(new AppError('Payment verification failed', 400));
       }
     }
     
@@ -206,8 +194,7 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
     if (!order) {
       await session.abortTransaction();
       session.endSession();
-      res.status(404).json({ message: 'Order not found' });
-      return;
+      return next(new AppError('Order not found', 404));
     }
     
     // Update order payment status
@@ -243,82 +230,60 @@ export const verifyPayment = async (req: Request, res: Response): Promise<void> 
     session.endSession();
     
     console.error('Error verifying payment:', error);
-    res.status(500).json({ 
-      message: 'Error verifying payment', 
-      error: error.message || error 
-    });
+    return next(new AppError('Error verifying payment', 500));
   }
-};
+});
 
 // Get user orders
-export const getUserOrders = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const userId = req.user?._id;
-    
-    if (!userId) {
-      res.status(401).json({ message: 'User not authenticated' });
-      return;
-    }
-    
-    const { page = 1, limit = 10 } = req.query;
-    
-    const options = {
-      page: parseInt(page as string),
-      limit: parseInt(limit as string),
-      sort: { createdAt: -1 }
-    };
-    
-    const result = await (Order as any).paginate({ user: userId }, options);
-    
-    res.status(200).json(result);
-  } catch (error: any) {
-    console.error('Error fetching user orders:', error);
-    res.status(500).json({ 
-      message: 'Error fetching orders', 
-      error: error.message || error 
-    });
+export const getUserOrders = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const userId = req.user?._id;
+  
+  if (!userId) {
+    return next(new AppError('User not authenticated', 401));
   }
-};
+  
+  const { page = 1, limit = 10 } = req.query;
+  
+  const options = {
+    page: parseInt(page as string),
+    limit: parseInt(limit as string),
+    sort: { createdAt: -1 }
+  };
+  
+  const result = await (Order as any).paginate({ user: userId }, options);
+  
+  res.status(200).json(result);
+});
 
 // Get order by ID
-export const getOrderById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const userId = req.user?._id;
-    const { orderId } = req.params;
-    
-    if (!userId) {
-      res.status(401).json({ message: 'User not authenticated' });
-      return;
-    }
-    
-    const order = await Order.findOne({ 
-      _id: orderId, 
-      user: userId 
-    }).populate({
-      path: 'vendorProducts.vendorProductId',
-      populate: {
-        path: 'productId vendorId',
-        select: 'name images businessName'
-      }
-    });
-    
-    if (!order) {
-      res.status(404).json({ message: 'Order not found' });
-      return;
-    }
-    
-    res.status(200).json(order);
-  } catch (error: any) {
-    console.error('Error fetching order:', error);
-    res.status(500).json({ 
-      message: 'Error fetching order', 
-      error: error.message || error 
-    });
+export const getOrderById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const userId = req.user?._id;
+  const { orderId } = req.params;
+  
+  if (!userId) {
+    return next(new AppError('User not authenticated', 401));
   }
-};
+  
+  const order = await Order.findOne({ 
+    _id: orderId, 
+    user: userId 
+  }).populate({
+    path: 'vendorProducts.vendorProductId',
+    populate: {
+      path: 'productId vendorId',
+      select: 'name images businessName'
+    }
+  });
+  
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+  
+  res.status(200).json(order);
+});
 
 // Cancel order
-export const cancelOrder = async (req: Request, res: Response): Promise<void> => {
+export const cancelOrder = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
@@ -329,8 +294,7 @@ export const cancelOrder = async (req: Request, res: Response): Promise<void> =>
     if (!userId) {
       await session.abortTransaction();
       session.endSession();
-      res.status(401).json({ message: 'User not authenticated' });
-      return;
+      return next(new AppError('User not authenticated', 401));
     }
     
     // Find order
@@ -342,16 +306,14 @@ export const cancelOrder = async (req: Request, res: Response): Promise<void> =>
     if (!order) {
       await session.abortTransaction();
       session.endSession();
-      res.status(404).json({ message: 'Order not found' });
-      return;
+      return next(new AppError('Order not found', 404));
     }
     
     // Check if order can be cancelled
     if (order.orderStatus === 'delivered' || order.orderStatus === 'cancelled') {
       await session.abortTransaction();
       session.endSession();
-      res.status(400).json({ message: 'Order cannot be cancelled' });
-      return;
+      return next(new AppError('Order cannot be cancelled', 400));
     }
     
     // Update order status
@@ -393,189 +355,168 @@ export const cancelOrder = async (req: Request, res: Response): Promise<void> =>
     session.endSession();
     
     console.error('Error cancelling order:', error);
-    res.status(500).json({ 
-      message: 'Error cancelling order', 
-      error: error.message || error 
-    });
+    return next(new AppError('Error cancelling order', 500));
   }
-};
+});
 
 // ==================== ADMIN ORDER MANAGEMENT ====================
 
 // Get orders for admin (admin-specific vendor products)
-export const getAdminOrders = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const adminId = req.user?._id;
-    const { page = 1, limit = 10, status, paymentStatus } = req.query;
-    
-    if (!adminId) {
-      res.status(401).json({ message: 'Admin not authenticated' });
-      return;
-    }
-    
-    // Build match conditions
-    const matchConditions: any = {
-      'vendorProducts.vendorId': adminId
-    };
-    
-    if (status) {
-      matchConditions.orderStatus = status;
-    }
-    
-    if (paymentStatus) {
-      matchConditions.paymentStatus = paymentStatus;
-    }
-    
-    const pipeline: any[] = [
-      {
-        $match: matchConditions
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'user',
-          foreignField: '_id',
-          as: 'customerDetails'
-        }
-      },
-      {
-        $unwind: {
-          path: '$customerDetails',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $lookup: {
-          from: 'vendorproducts',
-          localField: 'vendorProducts.vendorProductId',
-          foreignField: '_id',
-          as: 'vendorProductDetails'
-        }
-      },
-      {
-        $unwind: '$vendorProductDetails'
-      },
-      {
-        $match: {
-          'vendorProductDetails.vendorId': adminId
-        }
-      },
-      {
-        $lookup: {
-          from: 'vendors',
-          localField: 'vendorProductDetails.vendorId',
-          foreignField: '_id',
-          as: 'vendorDetails'
-        }
-      },
-      {
-        $unwind: {
-          path: '$vendorDetails',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $lookup: {
-          from: 'products',
-          localField: 'vendorProductDetails.productId',
-          foreignField: '_id',
-          as: 'productDetails'
-        }
-      },
-      {
-        $unwind: {
-          path: '$productDetails',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $project: {
+export const getAdminOrders = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const adminId = req.user?._id;
+  const { page = 1, limit = 10, status, paymentStatus } = req.query;
+  
+  if (!adminId) {
+    return next(new AppError('Admin not authenticated', 401));
+  }
+  
+  // Build match conditions
+  const matchConditions: any = {
+    'vendorProducts.vendorId': adminId
+  };
+  
+  if (status) {
+    matchConditions.orderStatus = status;
+  }
+  
+  if (paymentStatus) {
+    matchConditions.paymentStatus = paymentStatus;
+  }
+  
+  const pipeline: any[] = [
+    {
+      $match: matchConditions
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'customerDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$customerDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'vendorproducts',
+        localField: 'vendorProducts.vendorProductId',
+        foreignField: '_id',
+        as: 'vendorProductDetails'
+      }
+    },
+    {
+      $unwind: '$vendorProductDetails'
+    },
+    {
+      $match: {
+        'vendorProductDetails.vendorId': adminId
+      }
+    },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorProductDetails.vendorId',
+        foreignField: '_id',
+        as: 'vendorDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$vendorDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'vendorProductDetails.productId',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$productDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        orderId: 1,
+        totalAmount: 1,
+        paymentMethod: 1,
+        paymentStatus: 1,
+        orderStatus: 1,
+        shippingAddress: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        vendorProducts: 1,
+        customerDetails: {
           _id: 1,
-          orderId: 1,
-          totalAmount: 1,
-          paymentMethod: 1,
-          paymentStatus: 1,
-          orderStatus: 1,
-          shippingAddress: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          vendorProducts: 1,
-          customerDetails: {
-            _id: 1,
-            firstName: 1,
-            lastName: 1,
-            email: 1,
-            phone: 1
-          },
-          vendorDetails: {
-            _id: 1,
-            businessName: 1
-          },
-          productDetails: {
-            _id: 1,
-            name: 1
-          }
-        }
-      },
-      {
-        $sort: {
-          createdAt: -1
+          firstName: 1,
+          lastName: 1,
+          email: 1,
+          phone: 1
+        },
+        vendorDetails: {
+          _id: 1,
+          businessName: 1
+        },
+        productDetails: {
+          _id: 1,
+          name: 1
         }
       }
-    ];
-    
-    // Use aggregate pagination
-    const options = {
-      page: parseInt(page as string),
-      limit: parseInt(limit as string)
-    };
-    
-    const aggregate = Order.aggregate(pipeline);
-    const result = await (Order.aggregatePaginate as any)(aggregate, options);
-    
-    res.status(200).json(result);
-  } catch (error: any) {
-    console.error('Error fetching admin orders:', error);
-    res.status(500).json({ 
-      message: 'Error fetching orders', 
-      error: error.message || error 
-    });
-  }
-};
+    },
+    {
+      $sort: {
+        createdAt: -1
+      }
+    }
+  ];
+  
+  // Use aggregate pagination
+  const options = {
+    page: parseInt(page as string),
+    limit: parseInt(limit as string)
+  };
+  
+  const aggregate = Order.aggregate(pipeline);
+  const result = await (Order.aggregatePaginate as any)(aggregate, options);
+  
+  res.status(200).json(result);
+});
 
 // Get order by ID (admin)
-export const getAdminOrderById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { orderId } = req.params;
-    
-    const order = await Order.findById(orderId).populate({
-      path: 'vendorProducts.vendorProductId',
-      populate: {
-        path: 'productId vendorId',
-        select: 'name images businessName'
-      }
-    }).populate({
-      path: 'user',
-      select: 'firstName lastName email phone'
-    });
-    
-    if (!order) {
-      res.status(404).json({ message: 'Order not found' });
-      return;
+export const getAdminOrderById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { orderId } = req.params;
+  
+  const order = await Order.findById(orderId).populate({
+    path: 'vendorProducts.vendorProductId',
+    populate: {
+      path: 'productId vendorId',
+      select: 'name images businessName'
     }
-    
-    res.status(200).json(order);
-  } catch (error: any) {
-    console.error('Error fetching order:', error);
-    res.status(500).json({ 
-      message: 'Error fetching order', 
-      error: error.message || error 
-    });
+  }).populate({
+    path: 'user',
+    select: 'firstName lastName email phone'
+  });
+  
+  if (!order) {
+    return next(new AppError('Order not found', 404));
   }
-};
+  
+  res.status(200).json(order);
+});
 
 // Update order status (admin)
-export const updateOrderStatusAdmin = async (req: Request, res: Response): Promise<void> => {
+export const updateOrderStatusAdmin = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
@@ -588,10 +529,7 @@ export const updateOrderStatusAdmin = async (req: Request, res: Response): Promi
     if (!validStatuses.includes(status)) {
       await session.abortTransaction();
       session.endSession();
-      res.status(400).json({ 
-        message: 'Invalid status. Must be one of: pending, confirmed, processing, shipped, delivered, cancelled' 
-      });
-      return;
+      return next(new AppError('Invalid status. Must be one of: pending, confirmed, processing, shipped, delivered, cancelled', 400));
     }
     
     // Find order
@@ -600,8 +538,7 @@ export const updateOrderStatusAdmin = async (req: Request, res: Response): Promi
     if (!order) {
       await session.abortTransaction();
       session.endSession();
-      res.status(404).json({ message: 'Order not found' });
-      return;
+      return next(new AppError('Order not found', 404));
     }
     
     // Update order status
@@ -625,167 +562,145 @@ export const updateOrderStatusAdmin = async (req: Request, res: Response): Promi
     session.endSession();
     
     console.error('Error updating order status:', error);
-    res.status(500).json({ 
-      message: 'Error updating order status', 
-      error: error.message || error 
-    });
+    return next(new AppError('Error updating order status', 500));
   }
-};
+});
 
 // ==================== VENDOR ORDER MANAGEMENT ====================
 
 // Get orders for a specific vendor
-export const getVendorOrders = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const vendorId = req.user?._id;
-    
-    if (!vendorId) {
-      res.status(401).json({ message: 'Vendor not authenticated' });
-      return;
-    }
-    
-    const { page = 1, limit = 10, status } = req.query;
-    
-    // Build match conditions
-    const matchConditions: any = {
-      'vendorProducts.vendorId': vendorId
-    };
-    
-    if (status) {
-      matchConditions.orderStatus = status;
-    }
-    
-    const pipeline: any[] = [
-      {
-        $match: matchConditions
-      },
-      {
-        $lookup: {
-          from: 'vendorproducts',
-          localField: 'vendorProducts.vendorProductId',
-          foreignField: '_id',
-          as: 'vendorProductDetails'
-        }
-      },
-      {
-        $unwind: '$vendorProductDetails'
-      },
-      {
-        $match: {
-          'vendorProductDetails.vendorId': vendorId
-        }
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'user',
-          foreignField: '_id',
-          as: 'customerDetails'
-        }
-      },
-      {
-        $unwind: {
-          path: '$customerDetails',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $project: {
+export const getVendorOrders = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const vendorId = req.user?._id;
+  
+  if (!vendorId) {
+    return next(new AppError('Vendor not authenticated', 401));
+  }
+  
+  const { page = 1, limit = 10, status } = req.query;
+  
+  // Build match conditions
+  const matchConditions: any = {
+    'vendorProducts.vendorId': vendorId
+  };
+  
+  if (status) {
+    matchConditions.orderStatus = status;
+  }
+  
+  const pipeline: any[] = [
+    {
+      $match: matchConditions
+    },
+    {
+      $lookup: {
+        from: 'vendorproducts',
+        localField: 'vendorProducts.vendorProductId',
+        foreignField: '_id',
+        as: 'vendorProductDetails'
+      }
+    },
+    {
+      $unwind: '$vendorProductDetails'
+    },
+    {
+      $match: {
+        'vendorProductDetails.vendorId': vendorId
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'customerDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$customerDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        orderId: 1,
+        totalAmount: 1,
+        paymentMethod: 1,
+        paymentStatus: 1,
+        orderStatus: 1,
+        shippingAddress: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        vendorProductDetails: {
           _id: 1,
-          orderId: 1,
-          totalAmount: 1,
-          paymentMethod: 1,
-          paymentStatus: 1,
-          orderStatus: 1,
-          shippingAddress: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          vendorProductDetails: {
-            _id: 1,
-            productId: 1,
-            price: 1,
-            quantity: '$vendorProducts.quantity',
-            productName: 1,
-            productImage: 1
-          },
-          customerDetails: {
-            _id: 1,
-            firstName: 1,
-            lastName: 1,
-            email: 1,
-            phone: 1
-          }
-        }
-      },
-      {
-        $sort: {
-          createdAt: -1
+          productId: 1,
+          price: 1,
+          quantity: '$vendorProducts.quantity',
+          productName: 1,
+          productImage: 1
+        },
+        customerDetails: {
+          _id: 1,
+          firstName: 1,
+          lastName: 1,
+          email: 1,
+          phone: 1
         }
       }
-    ];
-    
-    // Use aggregate pagination
-    const options = {
-      page: parseInt(page as string),
-      limit: parseInt(limit as string)
-    };
-    
-    const aggregate = Order.aggregate(pipeline);
-    const result = await (Order.aggregatePaginate as any)(aggregate, options);
-    
-    res.status(200).json(result);
-  } catch (error: any) {
-    console.error('Error fetching vendor orders:', error);
-    res.status(500).json({ 
-      message: 'Error fetching orders', 
-      error: error.message || error 
-    });
-  }
-};
+    },
+    {
+      $sort: {
+        createdAt: -1
+      }
+    }
+  ];
+  
+  // Use aggregate pagination
+  const options = {
+    page: parseInt(page as string),
+    limit: parseInt(limit as string)
+  };
+  
+  const aggregate = Order.aggregate(pipeline);
+  const result = await (Order.aggregatePaginate as any)(aggregate, options);
+  
+  res.status(200).json(result);
+});
 
 // Get specific order for vendor
-export const getVendorOrderById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const vendorId = req.user?._id;
-    const { orderId } = req.params;
-    
-    if (!vendorId) {
-      res.status(401).json({ message: 'Vendor not authenticated' });
-      return;
-    }
-    
-    const order = await Order.findOne({ 
-      _id: orderId,
-      'vendorProducts.vendorId': vendorId
-    }).populate({
-      path: 'vendorProducts.vendorProductId',
-      match: { vendorId: vendorId },
-      populate: {
-        path: 'productId',
-        select: 'name images'
-      }
-    }).populate({
-      path: 'user',
-      select: 'firstName lastName email phone'
-    });
-    
-    if (!order) {
-      res.status(404).json({ message: 'Order not found' });
-      return;
-    }
-    
-    res.status(200).json(order);
-  } catch (error: any) {
-    console.error('Error fetching order:', error);
-    res.status(500).json({ 
-      message: 'Error fetching order', 
-      error: error.message || error 
-    });
+export const getVendorOrderById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const vendorId = req.user?._id;
+  const { orderId } = req.params;
+  
+  if (!vendorId) {
+    return next(new AppError('Vendor not authenticated', 401));
   }
-};
+  
+  const order = await Order.findOne({ 
+    _id: orderId,
+    'vendorProducts.vendorId': vendorId
+  }).populate({
+    path: 'vendorProducts.vendorProductId',
+    match: { vendorId: vendorId },
+    populate: {
+      path: 'productId',
+      select: 'name images'
+    }
+  }).populate({
+    path: 'user',
+    select: 'firstName lastName email phone'
+  });
+  
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+  
+  res.status(200).json(order);
+});
 
 // Update order status by vendor
-export const updateOrderStatusVendor = async (req: Request, res: Response): Promise<void> => {
+export const updateOrderStatusVendor = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
@@ -797,8 +712,7 @@ export const updateOrderStatusVendor = async (req: Request, res: Response): Prom
     if (!vendorId) {
       await session.abortTransaction();
       session.endSession();
-      res.status(401).json({ message: 'Vendor not authenticated' });
-      return;
+      return next(new AppError('Vendor not authenticated', 401));
     }
     
     // Validate status
@@ -806,10 +720,7 @@ export const updateOrderStatusVendor = async (req: Request, res: Response): Prom
     if (!validStatuses.includes(status)) {
       await session.abortTransaction();
       session.endSession();
-      res.status(400).json({ 
-        message: 'Invalid status. Must be one of: confirmed, processing, shipped, delivered' 
-      });
-      return;
+      return next(new AppError('Invalid status. Must be one of: confirmed, processing, shipped, delivered', 400));
     }
     
     // Find order
@@ -821,8 +732,7 @@ export const updateOrderStatusVendor = async (req: Request, res: Response): Prom
     if (!order) {
       await session.abortTransaction();
       session.endSession();
-      res.status(404).json({ message: 'Order not found' });
-      return;
+      return next(new AppError('Order not found', 404));
     }
     
     // Check if status transition is valid
@@ -837,10 +747,7 @@ export const updateOrderStatusVendor = async (req: Request, res: Response): Prom
     if (validTransitions[currentStatus] && !validTransitions[currentStatus].includes(status)) {
       await session.abortTransaction();
       session.endSession();
-      res.status(400).json({ 
-        message: `Cannot change status from ${currentStatus} to ${status}` 
-      });
-      return;
+      return next(new AppError(`Cannot change status from ${currentStatus} to ${status}`, 400));
     }
     
     // Update order status
@@ -881,9 +788,6 @@ export const updateOrderStatusVendor = async (req: Request, res: Response): Prom
     session.endSession();
     
     console.error('Error updating order status:', error);
-    res.status(500).json({ 
-      message: 'Error updating order status', 
-      error: error.message || error 
-    });
+    return next(new AppError('Error updating order status', 500));
   }
-};
+});

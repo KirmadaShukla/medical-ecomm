@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import { catchAsyncError, AppError } from '../utils/errorHandler';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import Product from '../models/product';
@@ -14,173 +15,148 @@ import { uploadProductImages } from '../utils/cloudinary';
 // ==================== VENDOR REGISTRATION ====================
 
 // Register a new vendor
-export const registerVendor = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const {
-      firstName,
-      lastName,
-      email,
-      password,
-      businessName,
-      businessLicense,
-      businessAddress,
-      businessPhone,
-      taxId,
-      bankAccount
-    } = req.body;
-    
-    // Basic validation
-    if (!firstName || !lastName || !email || !password || !businessName || 
-        !businessLicense || !businessAddress || !businessPhone) {
-      res.status(400).json({ 
-        message: 'Missing required fields: firstName, lastName, email, password, businessName, businessLicense, businessAddress, businessPhone' 
-      });
-      return;
-    }
-    
-    // Check if vendor with this email already exists
-    const existingVendor = await Vendor.findOne({ businessEmail: email });
-    if (existingVendor) {
-      res.status(409).json({ message: 'Vendor with this email already exists' });
-      return;
-    }
-    
-    // Create vendor profile
-    const vendor = new Vendor({
-      businessName,
-      businessLicense,
-      businessAddress,
-      businessPhone,
-      businessEmail: email,
-      taxId,
-      bankAccount,
-      status: 'pending', // Default to pending for approval
-      password, // Using the same password for vendor login
-      firstName,
-      lastName,
-      role: 'vendor'
-    });
-    
-    await vendor.save();
-    
-    // Generate vendor token (using vendor object but with IUser interface)
-    const token = generateVendorToken(vendor as any); // Type assertion to bypass type checking
-    
-    // Remove password from output
-    const vendorObj = vendor.toObject();
-    // @ts-ignore
-    delete vendorObj.password;
-    
-    res.status(201).json({
-      message: 'Vendor registered successfully. Awaiting admin approval.',
-      vendor: vendorObj,
-      token
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Error registering vendor', error });
+export const registerVendor = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    businessName,
+    businessLicense,
+    businessAddress,
+    businessPhone,
+    taxId,
+    bankAccount
+  } = req.body;
+  
+  // Basic validation
+  if (!firstName || !lastName || !email || !password || !businessName || 
+      !businessLicense || !businessAddress || !businessPhone) {
+    return next(new AppError('Missing required fields: firstName, lastName, email, password, businessName, businessLicense, businessAddress, businessPhone', 400));
   }
-};
+  
+  // Check if vendor with this email already exists
+  const existingVendor = await Vendor.findOne({ businessEmail: email });
+  if (existingVendor) {
+    return next(new AppError('Vendor with this email already exists', 409));
+  }
+  
+  // Create vendor profile
+  const vendor = new Vendor({
+    businessName,
+    businessLicense,
+    businessAddress,
+    businessPhone,
+    businessEmail: email,
+    taxId,
+    bankAccount,
+    status: 'pending', // Default to pending for approval
+    password, // Using the same password for vendor login
+    firstName,
+    lastName,
+    role: 'vendor'
+  });
+  
+  await vendor.save();
+  
+  // Generate vendor token (using vendor object but with IUser interface)
+  const token = generateVendorToken(vendor as any); // Type assertion to bypass type checking
+  
+  // Remove password from output
+  const vendorObj = vendor.toObject();
+  // @ts-ignore
+  delete vendorObj.password;
+  
+  res.status(201).json({
+    message: 'Vendor registered successfully. Awaiting admin approval.',
+    vendor: vendorObj,
+    token
+  });
+});
 
 // ==================== AUTHENTICATION ====================
 
 // Vendor login
-export const vendorLogin = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { businessEmail, password } = req.body;
-    
-    // Basic validation
-    if (!businessEmail || !password) {
-      res.status(400).json({ message: 'Please provide email and password' });
-      return;
-    }
-    
-    // Find vendor user by email and select password
-    const user = await Vendor.findOne({ businessEmail, role: 'vendor' }).select('+password');
-    
-    if (!user) {
-      res.status(401).json({ message: 'Invalid email or password' });
-      return;
-    }
-    
-    // Check password
-    const isPasswordCorrect = await user.comparePassword(password);
-    
-    if (!isPasswordCorrect) {
-      res.status(401).json({ message: 'Invalid email or password' });
-      return;
-    }
-    
-        
-    // Generate vendor token
-    const token = generateVendorToken(user);
-    
-    // Remove password from output
-    const userObj = user.toObject();
-    // @ts-ignore
-    delete userObj.password;
-    
-    res.status(200).json({
-      user: userObj,
-      token
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Error during vendor login', error });
+export const vendorLogin = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { businessEmail, password } = req.body;
+  
+  // Basic validation
+  if (!businessEmail || !password) {
+    return next(new AppError('Please provide email and password', 400));
   }
-};
+  
+  // Find vendor user by email and select password
+  const user = await Vendor.findOne({ businessEmail, role: 'vendor' }).select('+password');
+  
+  if (!user) {
+    return next(new AppError('Invalid email or password', 401));
+  }
+  
+  // Check password
+  const isPasswordCorrect = await user.comparePassword(password);
+  
+  if (!isPasswordCorrect) {
+    return next(new AppError('Invalid email or password', 401));
+  }
+  
+      
+  // Generate vendor token
+  const token = generateVendorToken(user);
+  
+  // Remove password from output
+  const userObj = user.toObject();
+  // @ts-ignore
+  delete userObj.password;
+  
+  res.status(200).json({
+    user: userObj,
+    token
+  });
+});
 
 // Send vendor token
-export const sendVendorToken = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Get token from header
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ message: 'Authentication required' });
-      return;
-    }
-    
-    const token = authHeader.split(' ')[1];
-    
-    // Verify token
-    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-    
-    // Check if this is a vendor token
-    if (decoded.role !== 'vendor') {
-      res.status(401).json({ message: 'Invalid token: Not a vendor token' });
-      return;
-    }
-    
-    // Find vendor in database
-    const vendor = await Vendor.findById(decoded.id);
-    if (!vendor || vendor.status !== 'approved') {
-      // Check if vendor is pending approval
-      if (vendor && vendor.status === 'pending') {
-        res.status(401).json({ message: 'Please wait for approval from admin side' });
-        return;
-      } else if (vendor && vendor.status === 'rejected') {
-        res.status(401).json({ message: 'Your vendor application has been rejected. Please contact support.' });
-        return;
-      } else if (vendor && vendor.status === 'suspended') {
-        res.status(401).json({ message: 'Your vendor account has been suspended. Please contact support.' });
-        return;
-      }
-      res.status(401).json({ message: 'Vendor not found or not approved' });
-      return;
-    }
-    
-    // Generate a new vendor token
-    const newToken = generateVendorToken(vendor);
-    
-    res.status(200).json({
-      token: newToken
-    });
-  } catch (error) {
-    res.status(401).json({ message: 'Invalid or expired token' });
+export const sendVendorToken = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // Get token from header
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next(new AppError('Authentication required', 401));
   }
-};
+  
+  const token = authHeader.split(' ')[1];
+  
+  // Verify token
+  const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+  
+  // Check if this is a vendor token
+  if (decoded.role !== 'vendor') {
+    return next(new AppError('Invalid token: Not a vendor token', 401));
+  }
+  
+  // Find vendor in database
+  const vendor = await Vendor.findById(decoded.id);
+  if (!vendor || vendor.status !== 'approved') {
+    // Check if vendor is pending approval
+    if (vendor && vendor.status === 'pending') {
+      return next(new AppError('Please wait for approval from admin side', 401));
+    } else if (vendor && vendor.status === 'rejected') {
+      return next(new AppError('Your vendor application has been rejected. Please contact support.', 401));
+    } else if (vendor && vendor.status === 'suspended') {
+      return next(new AppError('Your vendor account has been suspended. Please contact support.', 401));
+    }
+    return next(new AppError('Vendor not found or not approved', 401));
+  }
+  
+  // Generate a new vendor token
+  const newToken = generateVendorToken(vendor);
+  
+  res.status(200).json({
+    token: newToken
+  });
+});
 
 // Unified function to add products (both new and existing) - for vendors
-export const addProduct = async (req: Request, res: Response): Promise<void> => {
+export const addProduct = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
   
@@ -242,8 +218,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       if (!globalProduct) {
         await session.abortTransaction();
         session.endSession();
-        res.status(404).json({ message: 'Global product not found' });
-        return;
+        return next(new AppError('Global product not found', 404));
       }
       
       // Check if category exists and is active
@@ -251,15 +226,13 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       if (!categoryDoc) {
         await session.abortTransaction();
         session.endSession();
-        res.status(400).json({ message: 'Category not found' });
-        return;
+        return next(new AppError('Category not found', 400));
       }
       
       if (!categoryDoc.isActive) {
         await session.abortTransaction();
         session.endSession();
-        res.status(400).json({ message: 'Cannot create product. Category is not active' });
-        return;
+        return next(new AppError('Cannot create product. Category is not active', 400));
       }
       
       // Create new product
@@ -289,8 +262,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       if (!product) {
         await session.abortTransaction();
         session.endSession();
-        res.status(404).json({ message: 'Product not found' });
-        return;
+        return next(new AppError('Product not found', 404));
       }
       
       // Check if vendor already has this product
@@ -302,8 +274,7 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       if (existingVendorProduct) {
         await session.abortTransaction();
         session.endSession();
-        res.status(400).json({ message: 'You have already added this product' });
-        return;
+        return next(new AppError('You have already added this product', 400));
       }
       
       // Handle global product association if globalProductName is provided
@@ -351,15 +322,13 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
         if (!categoryDoc) {
           await session.abortTransaction();
           session.endSession();
-          res.status(400).json({ message: 'Category not found' });
-          return;
+          return next(new AppError('Category not found', 400));
         }
         
         if (!categoryDoc.isActive) {
           await session.abortTransaction();
           session.endSession();
-          res.status(400).json({ message: 'Cannot create product. Category is not active' });
-          return;
+          return next(new AppError('Cannot create product. Category is not active', 400));
         }
         
         // Create new product
@@ -511,90 +480,80 @@ export const addProduct = async (req: Request, res: Response): Promise<void> => 
       });
     } else {
       // Handle other errors
-      res.status(400).json({ message: 'Error adding product', error: error.message || error });
+      return next(new AppError('Error adding product: ' + (error.message || error), 400));
     }
   }
-};
+});
 
 // Get vendor's products with aggregation for better performance
-export const getVendorProducts = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Get pagination parameters from query
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    
-    // Build the aggregation pipeline
-    const pipeline: any[] = [
-      {
-        $match: {
-          vendorId: req.user._id
-        }
-      },
-      {
-        $lookup: {
-          from: 'products',
-          localField: 'productId',
-          foreignField: '_id',
-          as: 'productDetails'
-        }
-      },
-      {
-        $unwind: '$productDetails'
-      },
-      {
-        $lookup: {
-          from: 'categories',
-          localField: 'productDetails.category',
-          foreignField: '_id',
-          as: 'categoryDetails'
-        }
-      },
-      {
-        $unwind: {
-          path: '$categoryDetails',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $lookup: {
-          from: 'brands',
-          localField: 'productDetails.brand',
-          foreignField: '_id',
-          as: 'brandDetails'
-        }
-      },
-      {
-        $unwind: {
-          path: '$brandDetails',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $project: {
+export const getVendorProducts = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // Get pagination parameters from query
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  
+  // Build the aggregation pipeline
+  const pipeline: any[] = [
+    {
+      $match: {
+        vendorId: req.user._id
+      }
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    {
+      $unwind: '$productDetails'
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'productDetails.category',
+        foreignField: '_id',
+        as: 'categoryDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$categoryDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'productDetails.brand',
+        foreignField: '_id',
+        as: 'brandDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$brandDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        vendorId: 1,
+        price: 1,
+        stock: 1,
+        sku: 1,
+        status: 1,
+        isActive: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        productDetails: {
           _id: 1,
-          vendorId: 1,
-          price: 1,
-          stock: 1,
-          sku: 1,
-          status: 1,
+          name: 1,
+          description: 1,
+          images: 1,
           isActive: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          productDetails: {
-            _id: 1,
-            name: 1,
-            description: 1,
-            images: 1,
-            isActive: 1,
-            categoryDetails: {
-              _id: 1,
-              name: 1
-            },
-            brandDetails: {
-              _id: 1,
-              name: 1
-            }
-          },
           categoryDetails: {
             _id: 1,
             name: 1
@@ -603,82 +562,78 @@ export const getVendorProducts = async (req: Request, res: Response): Promise<vo
             _id: 1,
             name: 1
           }
-        }
-      },
-      {
-        $sort: {
-          createdAt: -1
+        },
+        categoryDetails: {
+          _id: 1,
+          name: 1
+        },
+        brandDetails: {
+          _id: 1,
+          name: 1
         }
       }
-    ];
-    
-    // Use aggregate pagination
-    const options = {
-      page,
-      limit
-    };
-    
-    const aggregate = VendorProduct.aggregate(pipeline);
-    const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
-    
-    res.status(200).json(result);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching products', error });
-  }
-};
+    },
+    {
+      $sort: {
+        createdAt: -1
+      }
+    }
+  ];
+  
+  // Use aggregate pagination
+  const options = {
+    page,
+    limit
+  };
+  
+  const aggregate = VendorProduct.aggregate(pipeline);
+  const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
+  
+  res.status(200).json(result);
+});
 
 // Update vendor product
-export const updateVendorProduct = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const vendorProduct = await VendorProduct.findOne({
-      _id: req.params.id,
-      vendorId: req.user._id
-    }).populate('productId');
-    
-    if (!vendorProduct) {
-      res.status(404).json({ message: 'Product not found or you do not have permission to update it' });
-      return;
-    }
-    
-    // Update the vendor product fields
-    // Handle isActive separately to ensure it's properly managed
-    const { isActive, ...otherFields } = req.body;
-    Object.assign(vendorProduct, otherFields);
-    
-    // Only allow isActive to be updated if explicitly provided
-    if (isActive !== undefined) {
-      vendorProduct.isActive = isActive;
-    }
-    
-    // Set status to pending for admin review
-    vendorProduct.status = 'pending';
-    
-    await vendorProduct.save();
-    
-    res.status(200).json({ 
-      message: 'Product updated successfully. Awaiting admin approval.', 
-      vendorProduct 
-    });
-  } catch (error) {
-    res.status(400).json({ message: 'Error updating product', error });
+export const updateVendorProduct = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const vendorProduct = await VendorProduct.findOne({
+    _id: req.params.id,
+    vendorId: req.user._id
+  }).populate('productId');
+  
+  if (!vendorProduct) {
+    return next(new AppError('Product not found or you do not have permission to update it', 404));
   }
-};
+  
+  // Update the vendor product fields
+  // Handle isActive separately to ensure it's properly managed
+  const { isActive, ...otherFields } = req.body;
+  Object.assign(vendorProduct, otherFields);
+  
+  // Only allow isActive to be updated if explicitly provided
+  if (isActive !== undefined) {
+    vendorProduct.isActive = isActive;
+  }
+  
+  // Set status to pending for admin review
+  vendorProduct.status = 'pending';
+  
+  await vendorProduct.save();
+  
+  res.status(200).json({ 
+    message: 'Product updated successfully. Awaiting admin approval.', 
+    vendorProduct 
+  });
+});
 
 // Delete vendor product
-export const deleteVendorProduct = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const vendorProduct = await VendorProduct.findOneAndDelete({
-      _id: req.params.id,
-      vendorId: req.user._id
-    });
-    
-    if (!vendorProduct) {
-      res.status(404).json({ message: 'Product not found or you do not have permission to delete it' });
-      return;
-    }
-    
-    res.status(200).json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error deleting product', error });
+export const deleteVendorProduct = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const vendorProduct = await VendorProduct.findOneAndDelete({
+    _id: req.params.id,
+    vendorId: req.user._id
+  });
+  
+  if (!vendorProduct) {
+    return next(new AppError('Product not found or you do not have permission to delete it', 404));
   }
-};
+  
+  res.status(200).json({ message: 'Product deleted successfully' });
+});

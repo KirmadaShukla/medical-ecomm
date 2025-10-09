@@ -25,6 +25,7 @@ export interface IVendorProduct extends Document {
 // Extend the model interface to include aggregatePaginate
 interface IVendorProductModel extends Model<IVendorProduct> {
   aggregatePaginate: typeof aggregatePaginate;
+  paginate: typeof mongoosePaginate;
 }
 
 const VendorProductSchema: Schema = new Schema({

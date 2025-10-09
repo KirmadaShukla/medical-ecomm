@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError, sendErrorDev, sendErrorProd } from '../utils/errorHandler';
+import { Types } from 'mongoose';
 
 export const globalErrorHandler = (
   err: any,
@@ -23,13 +24,28 @@ export const globalErrorHandler = (
     if (err.name === 'ValidationError') error = handleValidationErrorDB(error);
     if (err.name === 'JsonWebTokenError') error = handleJWTError();
     if (err.name === 'TokenExpiredError') error = handleJWTExpiredError();
-    
+        
     sendErrorProd(error, res);
   }
 };
 
 const handleCastErrorDB = (err: any) => {
-  const message = `Invalid ${err.path}: ${err.value}.`;
+  // More detailed CastError handling
+  if (err.reason && err.reason.message) {
+    const message = `Invalid data format: ${err.reason.message}. This usually happens when there's an invalid ObjectId reference in the database.`;
+    console.error('CastError details:', err);
+    return new AppError(message, 400);
+  }
+  
+  // Handle specific ObjectId validation errors
+  if (err.message && err.message.includes('24 character hex string')) {
+    const message = 'Invalid ObjectId format. Please check the data integrity in the database.';
+    console.error('ObjectId CastError details:', err);
+    return new AppError(message, 400);
+  }
+  
+  const message = `Invalid ${err.path}: ${err.value}. This usually happens when there's an invalid ObjectId reference in the database.`;
+  console.error('CastError details:', err);
   return new AppError(message, 400);
 };
 
@@ -51,6 +67,7 @@ const handleDuplicateFieldsDB = (err: any) => {
   else {
     const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0];
     const message = `Duplicate field value: ${value}. Please use another value!`;
+    console.error('Duplicate field error details:', err);
     return new AppError(message, 400);
   }
 };
@@ -58,6 +75,7 @@ const handleDuplicateFieldsDB = (err: any) => {
 const handleValidationErrorDB = (err: any) => {
   const errors = Object.values(err.errors).map((el: any) => el.message);
   const message = `Invalid input data. ${errors.join('. ')}`;
+  console.error('ValidationError details:', err);
   return new AppError(message, 400);
 };
 

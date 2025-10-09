@@ -29,8 +29,7 @@ app.use(cors({
   origin:"*",
   credentials: true
 }));
-app.use(morgan('combined')); // Add Morgan middleware for logging
-// Body parsing middleware should come before file upload
+app.use(morgan('dev')); 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(fileUpload({

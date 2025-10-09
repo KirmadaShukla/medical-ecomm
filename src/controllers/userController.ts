@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import User, { IUser, UserRole, UserStatus } from '../models/User';
-import { generateToken, generateAdminToken, generateVendorToken, generateUserToken } from '../utils/tokenUtils';
+import { generateUserToken } from '../utils/tokenUtils';
 import { catchAsyncError, AppError } from '../utils/errorHandler';
 
 export const getUsers = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
