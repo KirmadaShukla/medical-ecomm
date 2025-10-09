@@ -1,18 +1,18 @@
 import { Router } from 'express';
 import {
-  getAllProducts,
   getProductsByCategory,
   getProductsByBrand,
   getProductById,
   searchProducts,
   getFeaturedProducts,
-  getFilters
+  getFilters,
+  getAllProductsPost
 } from '../controllers/productController';
 
 const router = Router();
 
 // Public routes
-router.get('/products', getAllProducts);
+router.post('/products', getAllProductsPost);
 router.get('/products/featured', getFeaturedProducts);
 router.get('/products/filters', getFilters);
 router.get('/products/search', searchProducts);

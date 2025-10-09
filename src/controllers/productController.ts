@@ -890,3 +890,209 @@ export const getFilters = catchAsyncError(async (req: Request, res: Response, ne
     return next(error);
   }
 });
+
+// POST version of getAllProducts to handle array parameters properly
+export const getAllProductsPost = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { category, brand, minPrice, maxPrice, sortBy, search, page = 1, limit = 10 } = req.body;
+  
+  // Build sort conditions
+  let sortConditions: any = { createdAt: -1 };
+  if (sortBy === 'price-low') {
+    sortConditions = { 'vendorProducts.price': 1 };
+  } else if (sortBy === 'price-high') {
+    sortConditions = { 'vendorProducts.price': -1 };
+  } else if (sortBy === 'name') {
+    sortConditions = { 'productDetails.name': 1 };
+  }
+  
+  const pipeline: any[] = [
+    {
+      $match: {
+        status: 'approved',
+        isActive: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    {
+      $unwind: '$productDetails'
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'productDetails.category',
+        foreignField: '_id',
+        as: 'categoryDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$categoryDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'productDetails.brand',
+        foreignField: '_id',
+        as: 'brandDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$brandDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorId',
+        foreignField: '_id',
+        as: 'vendorDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$vendorDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    }
+  ];
+  
+  // Add search filter if provided
+  if (search && typeof search === 'string' && search.trim() !== '') {
+    const searchRegex = new RegExp(search.trim(), 'i');
+    pipeline.push({
+      $match: {
+        $or: [
+          { 'productDetails.name': searchRegex },
+          { 'productDetails.description': searchRegex },
+          { 'categoryDetails.name': searchRegex },
+          { 'brandDetails.name': searchRegex }
+        ]
+      }
+    });
+  }
+  
+  // Add category filter if provided (handle both single category and array of categories)
+  if (category) {
+    let categoryArray: string[] = [];
+    if (Array.isArray(category)) {
+      categoryArray = category as string[];
+    } else if (typeof category === 'string') {
+      // Check if it's a comma-separated string
+      if (category.includes(',')) {
+        categoryArray = category.split(',').map((cat: string) => cat.trim());
+      } else {
+        categoryArray = [category];
+      }
+    }
+    
+    if (categoryArray.length > 0) {
+      pipeline.push({
+        $match: {
+          'productDetails.category': { $in: categoryArray.map(id => new Types.ObjectId(id)) }
+        }
+      });
+    }
+  }
+  
+  // Add brand filter if provided (handle both single brand and array of brands)
+  if (brand) {
+    let brandArray: string[] = [];
+    if (Array.isArray(brand)) {
+      brandArray = brand as string[];
+    } else if (typeof brand === 'string') {
+      // Check if it's a comma-separated string
+      if (brand.includes(',')) {
+        brandArray = brand.split(',').map((br: string) => br.trim());
+      } else {
+        brandArray = [brand];
+      }
+    }
+    
+    if (brandArray.length > 0) {
+      pipeline.push({
+        $match: {
+          'productDetails.brand': { $in: brandArray.map(id => new Types.ObjectId(id)) }
+        }
+      });
+    }
+  }
+  
+  // Add price filters if provided
+  if (minPrice || maxPrice) {
+    const priceMatch: any = {};
+    if (minPrice) {
+      priceMatch.$gte = parseFloat(minPrice as string);
+    }
+    if (maxPrice) {
+      priceMatch.$lte = parseFloat(maxPrice as string);
+    }
+    pipeline.push({
+      $match: {
+        price: priceMatch
+      }
+    });
+  }
+  
+  // Add projection to limit fields
+  pipeline.push({
+    $project: {
+      _id: 1,
+      price: 1,
+      stock: 1,
+      sku: 1,
+      isActive: 1,
+      isFeatured: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      productDetails: {
+        _id: 1,
+        name: 1,
+        description: 1,
+        images: 1,
+        category: 1,
+        brand: 1,
+        createdAt: 1,
+        updatedAt: 1
+      },
+      categoryDetails: {
+        _id: 1,
+        name: 1
+      },
+      brandDetails: {
+        _id: 1,
+        name: 1
+      },
+      vendorDetails: {
+        _id: 1,
+        businessName: 1
+      }
+    }
+  });
+  
+  // Add sorting
+  pipeline.push({
+    $sort: sortConditions
+  });
+  
+  // Use aggregate pagination
+  const options = {
+    page: parseInt(page as string),
+    limit: parseInt(limit as string)
+  };
+  
+  const aggregate = VendorProduct.aggregate(pipeline);
+  const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
+  
+  res.status(200).json(result);
+});
