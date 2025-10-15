@@ -418,6 +418,7 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       category, 
       brand, 
       price, 
+      shippingPrice = 0,
       stock, 
       sku, 
       globalProductId, 
@@ -674,11 +675,16 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       }
     }
     
+    // Calculate total price
+    const calculatedTotalPrice = (price || 0) + (shippingPrice || 0);
+    
     // Create vendor product with approved status since admin is adding it
     const vendorProduct = new VendorProduct({
       productId: product?._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated admin ID
       price: price || 0, // Default to 0 if not provided
+      shippingPrice: shippingPrice || 0, // Default to 0 if not provided
+      totalPrice: calculatedTotalPrice, // Calculate total price
       stock: stock || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
       status: 'approved', // Approved by default since admin is adding it
@@ -875,7 +881,14 @@ export const updateAdminUploadedProducts = catchAsyncError(async (req: Request, 
   }
   
   // Update the vendor product fields
-  const { price, stock, sku, status, isFeatured, isActive } = req.body;
+  const { price, stock, sku, status, isFeatured, isActive, shippingPrice } = req.body;
+  
+  // Calculate total price if shippingPrice or price is updated
+  if (shippingPrice !== undefined || price !== undefined) {
+    const newPrice = price !== undefined ? price : vendorProduct.price;
+    const newShippingPrice = shippingPrice !== undefined ? shippingPrice : vendorProduct.shippingPrice;
+    vendorProduct.totalPrice = newPrice + newShippingPrice;
+  }
   
   if (price !== undefined) vendorProduct.price = price;
   if (stock !== undefined) vendorProduct.stock = stock;
@@ -883,6 +896,7 @@ export const updateAdminUploadedProducts = catchAsyncError(async (req: Request, 
   if (status !== undefined) vendorProduct.status = status;
   if (isFeatured !== undefined) vendorProduct.isFeatured = isFeatured;
   if (isActive !== undefined) vendorProduct.isActive = isActive;
+  if (shippingPrice !== undefined) vendorProduct.shippingPrice = shippingPrice;
   
   await vendorProduct.save();
 
@@ -1084,12 +1098,25 @@ export const getVendorProducts = catchAsyncError(async (req: Request, res: Respo
 
 // Update vendor product status (approve/reject)
 export const updateVendorProductStatus = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { status, isActive } = req.body;
+  const { status, isActive, price, shippingPrice } = req.body;
   
   // Prepare update object
   const updateFields: any = {};
   if (status !== undefined) updateFields.status = status;
   if (isActive !== undefined) updateFields.isActive = isActive;
+  if (price !== undefined) updateFields.price = price;
+  if (shippingPrice !== undefined) updateFields.shippingPrice = shippingPrice;
+  
+  // Calculate total price if price or shippingPrice is updated
+  if (price !== undefined || shippingPrice !== undefined) {
+    // First get the current vendor product to calculate the new total price
+    const vendorProduct = await VendorProduct.findById(req.params.id);
+    if (vendorProduct) {
+      const newPrice = price !== undefined ? price : vendorProduct.price;
+      const newShippingPrice = shippingPrice !== undefined ? shippingPrice : vendorProduct.shippingPrice;
+      updateFields.totalPrice = newPrice + newShippingPrice;
+    }
+  }
   
   const vendorProduct = await VendorProduct.findByIdAndUpdate(
     req.params.id,
@@ -1102,7 +1129,7 @@ export const updateVendorProductStatus = catchAsyncError(async (req: Request, re
   }
   
   res.status(200).json({ 
-    message: `Product ${status} successfully`, 
+    message: `Product updated successfully`, 
     vendorProduct 
   });
 });

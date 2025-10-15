@@ -13,6 +13,8 @@ export interface IVendorProduct extends Document {
   vendorId: mongoose.Types.ObjectId; // Reference to Vendor
   globalProductId?: mongoose.Types.ObjectId; // Reference to GlobalProduct
   price: number;
+  shippingPrice: number;
+  totalPrice: number;
   stock: number;
   sku: string; // Vendor-specific SKU
   status: 'pending' | 'approved' | 'rejected';
@@ -44,6 +46,18 @@ const VendorProductSchema: Schema = new Schema({
     ref: 'GlobalProduct'
   },
   price: { 
+    type: Number, 
+    required: true,
+    min: 0,
+    default: 0
+  },
+  shippingPrice: { 
+    type: Number, 
+    required: true,
+    min: 0,
+    default: 0
+  },
+  totalPrice: { 
     type: Number, 
     required: true,
     min: 0,

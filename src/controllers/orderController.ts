@@ -51,7 +51,7 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
   session.startTransaction();
   
   try {
-    const { vendorProducts, shippingAddress, billingAddress, notes } = req.body;
+    const { vendorProducts, shippingAddress, billingAddress, notes, paymentMethod = 'razorpay' } = req.body;
     const userId = req.user?._id;
     
     if (!userId) {
@@ -70,6 +70,14 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       await session.abortTransaction();
       session.endSession();
       return next(new AppError('Shipping address is required', 400));
+    }
+    
+    // Validate payment method
+    const validPaymentMethods = ['razorpay', 'cod', 'wallet'];
+    if (!validPaymentMethods.includes(paymentMethod)) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new AppError('Invalid payment method', 400));
     }
     
     // Validate that all vendor product IDs are valid ObjectIds
@@ -124,14 +132,20 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       });
     }
     
+    // Set payment status based on payment method
+    let paymentStatus = 'pending';
+    if (paymentMethod === 'cod') {
+      paymentStatus = 'pending'; // COD orders are pending until delivery
+    }
+    
     // Create order in database
     const order = new Order({
       orderId: generateOrderId(),
       user: userId,
       vendorProducts: orderItems,
       totalAmount,
-      paymentMethod: 'razorpay',
-      paymentStatus: 'pending',
+      paymentMethod,
+      paymentStatus,
       orderStatus: 'pending',
       shippingAddress,
       billingAddress: billingAddress || shippingAddress,
@@ -140,23 +154,44 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
     
     await order.save({ session });
     
-    // Create Razorpay order
-    const razorpayOrder = await razorpay.orders.create({
-      amount: totalAmount * 100, // Razorpay expects amount in paise
-      currency: 'INR',
-      receipt: order.orderId,
-      notes: {
-        orderId: (order._id as mongoose.Types.ObjectId).toString()
-      }
-    });
+    // For Razorpay payments, create Razorpay order
+    let razorpayOrderId = null;
+    if (paymentMethod === 'razorpay') {
+      const razorpayOrder = await razorpay.orders.create({
+        amount: totalAmount * 100, // Razorpay expects amount in paise
+        currency: 'INR',
+        receipt: order.orderId,
+        notes: {
+          orderId: (order._id as mongoose.Types.ObjectId).toString()
+        }
+      });
+      
+      // Update order with Razorpay order ID
+      razorpayOrderId = razorpayOrder.id;
+      order.razorpayOrderId = razorpayOrderId;
+      await order.save({ session });
+    }
     
-    // Update order with Razorpay order ID
-    order.razorpayOrderId = razorpayOrder.id;
-    await order.save({ session });
+    // For COD orders, reduce stock immediately since payment will be collected on delivery
+    if (paymentMethod === 'cod') {
+      for (const item of order.vendorProducts) {
+        await VendorProduct.findByIdAndUpdate(
+          item.vendorProductId,
+          { $inc: { stock: -item.quantity } },
+          { session }
+        );
+      }
+      await order.save({ session });
+    }
     
     // Commit transaction
     await session.commitTransaction();
     session.endSession();
+    
+    // Determine razorpayOrderId to return (null for non-Razorpay payments)
+    if (paymentMethod === 'razorpay') {
+      razorpayOrderId = order.razorpayOrderId;
+    }
     
     res.status(201).json({
       message: 'Order created successfully',
@@ -164,7 +199,7 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
         _id: order._id,
         orderId: order.orderId,
         totalAmount: order.totalAmount,
-        razorpayOrderId: order.razorpayOrderId
+        razorpayOrderId: razorpayOrderId
       }
     });
   } catch (error: any) {

@@ -168,6 +168,7 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       category, 
       brand, 
       price, 
+      shippingPrice = 0,
       stock, 
       sku, 
       globalProductId, 
@@ -425,11 +426,16 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       }
     }
     
+    // Calculate total price
+    const calculatedTotalPrice = (price || 0) + (shippingPrice || 0);
+    
     // Create vendor product with pending status and isActive flag
     const vendorProduct = new VendorProduct({
       productId: product?._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated user ID
       price: price || 0, // Default to 0 if not provided
+      shippingPrice: shippingPrice || 0, // Default to 0 if not provided
+      totalPrice: calculatedTotalPrice, // Calculate total price
       stock: stock || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
       status: 'pending', // Pending approval for both new and existing products
@@ -605,12 +611,25 @@ export const updateVendorProduct = catchAsyncError(async (req: Request, res: Res
   
   // Update the vendor product fields
   // Handle isActive separately to ensure it's properly managed
-  const { isActive, ...otherFields } = req.body;
+  const { isActive, shippingPrice, ...otherFields } = req.body;
+  
+  // Calculate total price if shippingPrice or price is updated
+  if (shippingPrice !== undefined || req.body.price !== undefined) {
+    const newPrice = req.body.price !== undefined ? req.body.price : vendorProduct.price;
+    const newShippingPrice = shippingPrice !== undefined ? shippingPrice : vendorProduct.shippingPrice;
+    vendorProduct.totalPrice = newPrice + newShippingPrice;
+  }
+  
   Object.assign(vendorProduct, otherFields);
   
   // Only allow isActive to be updated if explicitly provided
   if (isActive !== undefined) {
     vendorProduct.isActive = isActive;
+  }
+  
+  // Update shippingPrice if provided
+  if (shippingPrice !== undefined) {
+    vendorProduct.shippingPrice = shippingPrice;
   }
   
   // Set status to pending for admin review
