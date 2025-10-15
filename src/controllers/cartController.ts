@@ -205,7 +205,7 @@ export const removeItemFromCart = catchAsyncError(async (req: Request, res: Resp
   await cart.populate({
     path: 'items.vendorProductId',
     populate: [
-      { path: 'productId', select: 'name description' },
+      { path: 'productId', select: 'name description images' },
       { path: 'vendorId', select: 'businessName' }
     ]
   });
