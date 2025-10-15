@@ -18,6 +18,6 @@ router.get('/products/filters', getFilters);
 router.get('/products/search', searchProducts);
 router.get('/products/category/:categoryId', getProductsByCategory);
 router.get('/products/brand/:brandId', getProductsByBrand);
-router.get('/products/:productId', getProductById);
+router.get('/products/:vendorProductId', getProductById);
 
 export default router;

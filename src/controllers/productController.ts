@@ -470,12 +470,12 @@ export const getProductsByBrand = catchAsyncError(async (req: Request, res: Resp
 
 // Get product by ID with vendor details
 export const getProductById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { productId } = req.params;
+  const { vendorProductId } = req.params;
   
   const vendorProduct = await VendorProduct.aggregate([
     {
       $match: {
-        _id: new Types.ObjectId(productId),
+        _id: new Types.ObjectId(vendorProductId),
         status: 'approved',
         isActive: true
       }
@@ -560,7 +560,10 @@ export const getProductById = catchAsyncError(async (req: Request, res: Response
         },
         vendorDetails: {
           _id: 1,
-          businessName: 1
+          businessName: 1,
+          businessAddress: 1,
+          businessPhone: 1,
+          businessEmail: 1
         }
       }
     }
@@ -686,7 +689,10 @@ export const searchProducts = catchAsyncError(async (req: Request, res: Response
         },
         vendorDetails: {
           _id: 1,
-          businessName: 1
+          businessName: 1,
+          businessAddress: 1,
+          businessPhone: 1,
+          businessEmail: 1
         }
       }
     },
@@ -814,7 +820,10 @@ export const getFeaturedProducts = catchAsyncError(async (req: Request, res: Res
           },
           vendorDetails: {
             _id: 1,
-            businessName: 1
+            businessName: 1,
+            businessAddress: 1,
+            businessPhone: 1,
+            businessEmail: 1
           }
         }
       },

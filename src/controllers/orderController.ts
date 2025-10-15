@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import Order from '../models/order';
 import VendorProduct from '../models/vendorProduct';
+import Cart from '../models/cart';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import { catchAsyncError, AppError } from '../utils/errorHandler';
@@ -177,71 +178,95 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
 
 // Verify Razorpay payment
 export const verifyPayment = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // Implement retry logic for handling MongoDB Write Conflicts
+  const MAX_RETRIES = 3;
+  let retries = 0;
   
-  try {
-    const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+  while (retries < MAX_RETRIES) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     
-    // If using dummy implementation, skip signature verification
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      console.warn('Using dummy payment verification');
-    } else {
-      // Verify payment signature
-      const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '');
-      shasum.update(`${razorpayOrderId}|${razorpayPaymentId}`);
-      const digest = shasum.digest('hex');
+    try {
+      const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
       
-      if (digest !== razorpaySignature) {
+      // If using dummy implementation, skip signature verification
+      if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+        console.warn('Using dummy payment verification');
+      } else {
+        // Verify payment signature
+        const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '');
+        shasum.update(`${razorpayOrderId}|${razorpayPaymentId}`);
+        const digest = shasum.digest('hex');
+        
+        if (digest !== razorpaySignature) {
+          await session.abortTransaction();
+          session.endSession();
+          return next(new AppError('Payment verification failed', 400));
+        }
+      }
+      
+      // Find order by Razorpay order ID
+      const order = await Order.findOne({ razorpayOrderId }).session(session);
+      
+      if (!order) {
         await session.abortTransaction();
         session.endSession();
-        return next(new AppError('Payment verification failed', 400));
+        return next(new AppError('Order not found', 404));
       }
-    }
-    
-    // Find order by Razorpay order ID
-    const order = await Order.findOne({ razorpayOrderId }).session(session);
-    
-    if (!order) {
+      
+      // Update order payment status
+      order.paymentStatus = 'completed';
+      order.razorpayPaymentId = razorpayPaymentId;
+      order.razorpaySignature = razorpaySignature;
+      
+      // Update stock quantities for vendor products
+      for (const item of order.vendorProducts) {
+        await VendorProduct.findByIdAndUpdate(
+          item.vendorProductId,
+          { $inc: { stock: -item.quantity } },
+          { session }
+        );
+      }
+      
+      await order.save({ session });
+      
+      // Commit transaction
+      await session.commitTransaction();
+      session.endSession();
+      
+      // Clear user's cart after successful payment
+      try {
+        await Cart.findOneAndDelete({ userId: order.user });
+      } catch (cartError) {
+        console.warn('Failed to clear user cart after payment:', cartError);
+        // Don't fail the payment verification if cart clearing fails
+      }
+      
+      res.status(200).json({
+        message: 'Payment verified successfully',
+        order: {
+          _id: order._id,
+          orderId: order.orderId,
+          paymentStatus: order.paymentStatus
+        }
+      });
+      return; // Success, exit the retry loop
+    } catch (error: any) {
       await session.abortTransaction();
       session.endSession();
-      return next(new AppError('Order not found', 404));
-    }
-    
-    // Update order payment status
-    order.paymentStatus = 'completed';
-    order.razorpayPaymentId = razorpayPaymentId;
-    order.razorpaySignature = razorpaySignature;
-    
-    // Update stock quantities for vendor products
-    for (const item of order.vendorProducts) {
-      await VendorProduct.findByIdAndUpdate(
-        item.vendorProductId,
-        { $inc: { stock: -item.quantity } },
-        { session }
-      );
-    }
-    
-    await order.save({ session });
-    
-    // Commit transaction
-    await session.commitTransaction();
-    session.endSession();
-    
-    res.status(200).json({
-      message: 'Payment verified successfully',
-      order: {
-        _id: order._id,
-        orderId: order.orderId,
-        paymentStatus: order.paymentStatus
+      
+      // Check if this is a write conflict error that should be retried
+      if (error.code === 112 && retries < MAX_RETRIES - 1) { // WriteConflict error
+        retries++;
+        console.warn(`Write conflict occurred, retrying... (${retries}/${MAX_RETRIES})`);
+        // Add a small delay before retrying to reduce contention
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 100));
+        continue;
       }
-    });
-  } catch (error: any) {
-    await session.abortTransaction();
-    session.endSession();
-    
-    console.error('Error verifying payment:', error);
-    return next(new AppError('Error verifying payment', 500));
+      
+      console.error('Error verifying payment:', error);
+      return next(new AppError('Error verifying payment', 500));
+    }
   }
 });
 
