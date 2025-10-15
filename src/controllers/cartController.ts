@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import Cart, { ICart } from '../models/cart';
 import VendorProduct from '../models/vendorProduct';
 import { catchAsyncError, AppError } from '../utils/errorHandler';
@@ -41,6 +42,11 @@ export const addItemToCart = catchAsyncError(async (req: Request, res: Response,
   // Validate input
   if (!vendorProductId || !quantity) {
     return next(new AppError('Please provide vendorProductId and quantity', 400));
+  }
+
+  // Validate that vendorProductId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(vendorProductId)) {
+    return next(new AppError('Invalid vendor product ID. Must be a valid MongoDB ObjectId.', 400));
   }
 
   // Check if vendor product exists and is in stock
@@ -101,6 +107,11 @@ export const addItemToCart = catchAsyncError(async (req: Request, res: Response,
 // Update item quantity in cart
 export const updateCartItem = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { vendorProductId } = req.params;
+
+  // Validate that vendorProductId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(vendorProductId)) {
+    return next(new AppError('Invalid vendor product ID. Must be a valid MongoDB ObjectId.', 400));
+  }
   const { quantity } = req.body;
 
   // Validate input
@@ -162,6 +173,11 @@ export const updateCartItem = catchAsyncError(async (req: Request, res: Response
 // Remove item from cart
 export const removeItemFromCart = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { vendorProductId } = req.params;
+
+  // Validate that vendorProductId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(vendorProductId)) {
+    return next(new AppError('Invalid vendor product ID. Must be a valid MongoDB ObjectId.', 400));
+  }
 
   // Find cart for user
   const cart = await Cart.findOne({ userId: req.user._id });

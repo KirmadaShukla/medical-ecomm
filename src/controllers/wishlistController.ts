@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import Wishlist, { IWishlist } from '../models/wishlist';
 import VendorProduct from '../models/vendorProduct';
 import { catchAsyncError, AppError } from '../utils/errorHandler';
@@ -40,6 +41,11 @@ export const addItemToWishlist = catchAsyncError(async (req: Request, res: Respo
   // Validate input
   if (!vendorProductId) {
     return next(new AppError('Please provide vendorProductId', 400));
+  }
+
+  // Validate that vendorProductId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(vendorProductId)) {
+    return next(new AppError('Invalid vendor product ID. Must be a valid MongoDB ObjectId.', 400));
   }
 
   // Check if vendor product exists
@@ -94,6 +100,11 @@ export const addItemToWishlist = catchAsyncError(async (req: Request, res: Respo
 // Remove item from wishlist
 export const removeItemFromWishlist = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { vendorProductId } = req.params;
+
+  // Validate that vendorProductId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(vendorProductId)) {
+    return next(new AppError('Invalid vendor product ID. Must be a valid MongoDB ObjectId.', 400));
+  }
 
   // Find wishlist for user
   const wishlist = await Wishlist.findOne({ userId: req.user._id });
@@ -152,6 +163,11 @@ export const clearWishlist = catchAsyncError(async (req: Request, res: Response,
 // Check if item exists in wishlist
 export const isItemInWishlist = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { vendorProductId } = req.params;
+
+  // Validate that vendorProductId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(vendorProductId)) {
+    return next(new AppError('Invalid vendor product ID. Must be a valid MongoDB ObjectId.', 400));
+  }
 
   // Find wishlist for user
   const wishlist = await Wishlist.findOne({ userId: req.user._id });

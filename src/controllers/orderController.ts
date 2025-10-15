@@ -71,7 +71,18 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       return next(new AppError('Shipping address is required', 400));
     }
     
+    // Validate that all vendor product IDs are valid ObjectIds
     const vendorProductIds = vendorProducts.map((item: any) => item.vendorProductId);
+    
+    // Check if any vendor product ID is invalid
+    for (const id of vendorProductIds) {
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        await session.abortTransaction();
+        session.endSession();
+        return next(new AppError(`Invalid vendor product ID: ${id}. All IDs must be valid MongoDB ObjectIds.`, 400));
+      }
+    }
+    
     const vendorProductDocs = await VendorProduct.find({
       _id: { $in: vendorProductIds },
       status: 'approved',
