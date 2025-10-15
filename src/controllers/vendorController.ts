@@ -5,10 +5,8 @@ import jwt from 'jsonwebtoken';
 import Product from '../models/product';
 import VendorProduct from '../models/vendorProduct';
 import Category from '../models/category';
-import User from '../models/User';
 import Vendor from '../models/vendors';
 import GlobalProduct from '../models/globalProduct';
-import Order from '../models/order';
 import { generateVendorToken } from '../utils/tokenUtils';
 import { uploadProductImages } from '../utils/cloudinary';
 
