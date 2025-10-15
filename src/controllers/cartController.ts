@@ -9,7 +9,7 @@ export const getCart = catchAsyncError(async (req: Request, res: Response, next:
   const cart = await Cart.findOne({ userId: req.user._id }).populate({
     path: 'items.vendorProductId',
     populate: [
-      { path: 'productId', select: 'name description image' },
+      { path: 'productId', select: 'name description images' },
       { path: 'vendorId', select: 'businessName' }
     ]
   });
