@@ -93,7 +93,7 @@ export const addItemToCart = catchAsyncError(async (req: Request, res: Response,
   await cart.populate({
     path: 'items.vendorProductId',
     populate: [
-      { path: 'productId', select: 'name description' },
+      { path: 'productId', select: 'name description images' },
       { path: 'vendorId', select: 'businessName' }
     ]
   });
@@ -159,7 +159,7 @@ export const updateCartItem = catchAsyncError(async (req: Request, res: Response
   await cart.populate({
     path: 'items.vendorProductId',
     populate: [
-      { path: 'productId', select: 'name description' },
+      { path: 'productId', select: 'name description images' },
       { path: 'vendorId', select: 'businessName' }
     ]
   });
