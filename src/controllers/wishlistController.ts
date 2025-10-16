@@ -9,7 +9,7 @@ export const getWishlist = catchAsyncError(async (req: Request, res: Response, n
   const wishlist = await Wishlist.findOne({ userId: req.user._id }).populate({
     path: 'items.vendorProductId',
     populate: [
-      { path: 'productId', select: 'name description' },
+      { path: 'productId', select: 'name description images' },
       { path: 'vendorId', select: 'businessName' }
     ]
   });
@@ -86,7 +86,7 @@ export const addItemToWishlist = catchAsyncError(async (req: Request, res: Respo
   await wishlist.populate({
     path: 'items.vendorProductId',
     populate: [
-      { path: 'productId', select: 'name description' },
+      { path: 'productId', select: 'name description images' },
       { path: 'vendorId', select: 'businessName' }
     ]
   });
@@ -132,7 +132,7 @@ export const removeItemFromWishlist = catchAsyncError(async (req: Request, res: 
   await wishlist.populate({
     path: 'items.vendorProductId',
     populate: [
-      { path: 'productId', select: 'name description' },
+      { path: 'productId', select: 'name description images' },
       { path: 'vendorId', select: 'businessName' }
     ]
   });
