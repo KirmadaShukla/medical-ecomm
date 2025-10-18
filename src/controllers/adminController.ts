@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { inspect } from 'util';
 import Category from '../models/category';
 import Brand from '../models/brand';
-import Product from '../models/product';
-import VendorProduct from '../models/vendorProduct';
+import Product, { IProduct } from '../models/product';
+import VendorProduct, { IVendorProduct } from '../models/vendorProduct';
 import Admin from '../models/admin';
 import Vendor from '../models/vendors';
 import User, { UserRole, UserStatus } from '../models/User';
@@ -1187,8 +1187,12 @@ export const getVendorSales = catchAsyncError(async (req: Request, res: Response
     return next(new AppError('Vendor not found', 404));
   }
   
-  // Get all vendor products for this vendor
-  const vendorProducts = await VendorProduct.find({ vendorId: vendorId });
+  // Get all vendor products for this vendor with product details
+  const vendorProducts = await VendorProduct.find({ vendorId: vendorId }).populate('productId');
+  const vendorProductMap = new Map<string, any>();
+  vendorProducts.forEach((vp) => {
+    vendorProductMap.set((vp._id as mongoose.Types.ObjectId).toString(), vp);
+  });
   const vendorProductIds = vendorProducts.map(vp => vp._id);
   
   // Find orders containing these vendor products within the date range
@@ -1196,7 +1200,7 @@ export const getVendorSales = catchAsyncError(async (req: Request, res: Response
     'vendorProducts.vendorProductId': { $in: vendorProductIds },
     createdAt: { $gte: start, $lte: end },
     paymentStatus: 'completed',
-    orderStatus: 'delivered'
+    orderStatus:'delivered'
   });
   
   // Calculate total sales
@@ -1207,24 +1211,31 @@ export const getVendorSales = catchAsyncError(async (req: Request, res: Response
   orders.forEach(order => {
     totalOrders++;
     order.vendorProducts.forEach(item => {
-      if (vendorProductIds.includes(item.vendorProductId)) {
+      // Check if the vendor product ID is in our list
+      if (vendorProductIds.some(id => (id as mongoose.Types.ObjectId).equals(item.vendorProductId))) {
         const itemTotal = item.price * item.quantity;
         totalSales += itemTotal;
         
+        // Get product name from vendor product
+        const vendorProduct = vendorProductMap.get(item.vendorProductId.toString());
+        // Fix: Check if productId is populated and has name property
+        const productName = (vendorProduct?.productId as unknown as IProduct)?.name || 'Unknown Product';
+        
         // Track sales by product
-        if (!salesByProduct[item.productName]) {
-          salesByProduct[item.productName] = {
+        if (!salesByProduct[productName]) {
+          salesByProduct[productName] = {
             quantity: 0,
             sales: 0
           };
         }
-        salesByProduct[item.productName].quantity += item.quantity;
-        salesByProduct[item.productName].sales += itemTotal;
+        salesByProduct[productName].quantity += item.quantity;
+        salesByProduct[productName].sales += itemTotal;
       }
     });
   });
   
-  res.status(200).json({
+  // Format the response with more detailed information
+  const salesData = {
     vendor: {
       id: vendor._id,
       businessName: vendor.businessName,
@@ -1234,10 +1245,22 @@ export const getVendorSales = catchAsyncError(async (req: Request, res: Response
       start,
       end
     },
-    totalSales,
-    totalOrders,
-    salesByProduct
-  });
+    summary: {
+      totalSales: parseFloat(totalSales.toFixed(2)),
+      totalOrders,
+      averageOrderValue: totalOrders > 0 ? parseFloat((totalSales / totalOrders).toFixed(2)) : 0
+    },
+    salesByProduct,
+    orders: orders.map(order => ({
+      id: order._id,
+      totalAmount: order.totalAmount,
+      orderStatus: order.orderStatus,
+      paymentStatus: order.paymentStatus,
+      createdAt: order.createdAt
+    }))
+  };
+  
+  res.status(200).json(salesData);
 });
 
 // Generate payment for a vendor based on their sales

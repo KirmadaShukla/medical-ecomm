@@ -491,7 +491,7 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
 
 // Get vendor's products with aggregation for better performance
 export const getVendorProducts = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  // Get pagination parameters from query
+
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   
@@ -622,11 +622,6 @@ export const updateVendorProduct = catchAsyncError(async (req: Request, res: Res
   
   Object.assign(vendorProduct, otherFields);
   
-  // Only allow isActive to be updated if explicitly provided
-  if (isActive !== undefined) {
-    vendorProduct.isActive = isActive;
-  }
-  
   // Update shippingPrice if provided
   if (shippingPrice !== undefined) {
     vendorProduct.shippingPrice = Number(shippingPrice);
@@ -637,13 +632,13 @@ export const updateVendorProduct = catchAsyncError(async (req: Request, res: Res
     vendorProduct.price = Number(req.body.price);
   }
   
-  // Set status to pending for admin review
-  vendorProduct.status = 'pending';
-  
+  // Note: isActive logic has been removed from here and moved to a separate endpoint
+  // This prevents requiring admin approval for simple updates
+  vendorProduct.status='pending'
   await vendorProduct.save();
   
   res.status(200).json({ 
-    message: 'Product updated successfully. Awaiting admin approval.', 
+    message: 'Product updated successfully. Please wait for admin approval.', 
     vendorProduct 
   });
 });
@@ -660,4 +655,27 @@ export const deleteVendorProduct = catchAsyncError(async (req: Request, res: Res
   }
   
   res.status(200).json({ message: 'Product deleted successfully' });
+});
+
+// Toggle vendor product active status
+export const toggleVendorProductActiveStatus = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const vendorProduct = await VendorProduct.findOne({
+    _id: req.params.id,
+    vendorId: req.user._id
+  });
+  
+  if (!vendorProduct) {
+    return next(new AppError('Product not found or you do not have permission to update it', 404));
+  }
+  
+  // Toggle the isActive status
+  vendorProduct.isActive = !vendorProduct.isActive;
+  
+  // Save the updated product
+  await vendorProduct.save();
+  
+  res.status(200).json({ 
+    message: `Product ${vendorProduct.isActive ? 'activated' : 'deactivated'} successfully.`, 
+    vendorProduct 
+  });
 });

@@ -38,13 +38,6 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
   };
 }
 
-// Generate unique order ID
-const generateOrderId = () => {
-  const timestamp = Date.now().toString();
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  return `ORD-${timestamp}-${random}`;
-};
-
 // Create order
 export const createOrder = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
@@ -126,9 +119,7 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       orderItems.push({
         vendorProductId: vendorProductDoc._id,
         quantity: item.quantity,
-        price: vendorProductDoc.price,
-        productName: (vendorProductDoc as any).productId.name,
-        productImage: (vendorProductDoc as any).productId.images[0]?.url || ''
+        price: vendorProductDoc.price
       });
     }
     
@@ -140,7 +131,6 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
     
     // Create order in database
     const order = new Order({
-      orderId: generateOrderId(),
       user: userId,
       vendorProducts: orderItems,
       totalAmount,
@@ -160,7 +150,7 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       const razorpayOrder = await razorpay.orders.create({
         amount: totalAmount * 100, // Razorpay expects amount in paise
         currency: 'INR',
-        receipt: order.orderId,
+        receipt: (order._id as mongoose.Types.ObjectId).toString(),
         notes: {
           orderId: (order._id as mongoose.Types.ObjectId).toString()
         }
@@ -197,7 +187,6 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       message: 'Order created successfully',
       order: {
         _id: order._id,
-        orderId: order.orderId,
         totalAmount: order.totalAmount,
         razorpayOrderId: razorpayOrderId
       }
@@ -281,7 +270,6 @@ export const verifyPayment = catchAsyncError(async (req: Request, res: Response,
         message: 'Payment verified successfully',
         order: {
           _id: order._id,
-          orderId: order.orderId,
           paymentStatus: order.paymentStatus
         }
       });
@@ -329,14 +317,14 @@ export const getUserOrders = catchAsyncError(async (req: Request, res: Response,
 // Get order by ID
 export const getOrderById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const userId = req.user?._id;
-  const { orderId } = req.params;
+  const { id } = req.params;
   
   if (!userId) {
     return next(new AppError('User not authenticated', 401));
   }
   
   const order = await Order.findOne({ 
-    _id: orderId, 
+    _id: id, 
     user: userId 
   }).populate({
     path: 'vendorProducts.vendorProductId',
@@ -360,7 +348,7 @@ export const cancelOrder = catchAsyncError(async (req: Request, res: Response, n
   
   try {
     const userId = req.user?._id;
-    const { orderId } = req.params;
+    const { id } = req.params;
     
     if (!userId) {
       await session.abortTransaction();
@@ -370,7 +358,7 @@ export const cancelOrder = catchAsyncError(async (req: Request, res: Response, n
     
     // Find order
     const order = await Order.findOne({ 
-      _id: orderId, 
+      _id: id, 
       user: userId 
     }).session(session);
     
@@ -417,7 +405,6 @@ export const cancelOrder = catchAsyncError(async (req: Request, res: Response, n
       message: 'Order cancelled successfully',
       order: {
         _id: order._id,
-        orderId: order.orderId,
         orderStatus: order.orderStatus
       }
     });
@@ -442,9 +429,7 @@ export const getAdminOrders = catchAsyncError(async (req: Request, res: Response
   }
   
   // Build match conditions
-  const matchConditions: any = {
-    'vendorProducts.vendorId': adminId
-  };
+  const matchConditions: any = {};
   
   if (status) {
     matchConditions.orderStatus = status;
@@ -519,7 +504,6 @@ export const getAdminOrders = catchAsyncError(async (req: Request, res: Response
     {
       $project: {
         _id: 1,
-        orderId: 1,
         totalAmount: 1,
         paymentMethod: 1,
         paymentStatus: 1,
@@ -541,7 +525,8 @@ export const getAdminOrders = catchAsyncError(async (req: Request, res: Response
         },
         productDetails: {
           _id: 1,
-          name: 1
+          name: 1,
+          images: 1
         }
       }
     },
@@ -566,9 +551,9 @@ export const getAdminOrders = catchAsyncError(async (req: Request, res: Response
 
 // Get order by ID (admin)
 export const getAdminOrderById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { orderId } = req.params;
+  const { id } = req.params;
   
-  const order = await Order.findById(orderId).populate({
+  const order = await Order.findById(id).populate({
     path: 'vendorProducts.vendorProductId',
     populate: {
       path: 'productId vendorId',
@@ -592,7 +577,7 @@ export const updateOrderStatusAdmin = catchAsyncError(async (req: Request, res: 
   session.startTransaction();
   
   try {
-    const { orderId } = req.params;
+    const { id } = req.params;
     const { status } = req.body;
     
     // Validate status
@@ -604,7 +589,7 @@ export const updateOrderStatusAdmin = catchAsyncError(async (req: Request, res: 
     }
     
     // Find order
-    const order = await Order.findById(orderId).session(session);
+    const order = await Order.findById(id).session(session);
     
     if (!order) {
       await session.abortTransaction();
@@ -624,7 +609,6 @@ export const updateOrderStatusAdmin = catchAsyncError(async (req: Request, res: 
       message: 'Order status updated successfully',
       order: {
         _id: order._id,
-        orderId: order.orderId,
         orderStatus: order.orderStatus
       }
     });
@@ -650,9 +634,7 @@ export const getVendorOrders = catchAsyncError(async (req: Request, res: Respons
   const { page = 1, limit = 10, status } = req.query;
   
   // Build match conditions
-  const matchConditions: any = {
-    'vendorProducts.vendorId': vendorId
-  };
+  const matchConditions: any = {};
   
   if (status) {
     matchConditions.orderStatus = status;
@@ -678,6 +660,21 @@ export const getVendorOrders = catchAsyncError(async (req: Request, res: Respons
         'vendorProductDetails.vendorId': vendorId
       }
     },
+    // Lookup product details from the Product collection
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'vendorProductDetails.productId',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$productDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
     {
       $lookup: {
         from: 'users',
@@ -695,7 +692,6 @@ export const getVendorOrders = catchAsyncError(async (req: Request, res: Respons
     {
       $project: {
         _id: 1,
-        orderId: 1,
         totalAmount: 1,
         paymentMethod: 1,
         paymentStatus: 1,
@@ -708,8 +704,8 @@ export const getVendorOrders = catchAsyncError(async (req: Request, res: Respons
           productId: 1,
           price: 1,
           quantity: '$vendorProducts.quantity',
-          productName: 1,
-          productImage: 1
+          productName: '$productDetails.name',
+          productImage: { $arrayElemAt: ['$productDetails.images.url', 0] }
         },
         customerDetails: {
           _id: 1,
@@ -742,29 +738,29 @@ export const getVendorOrders = catchAsyncError(async (req: Request, res: Respons
 // Get specific order for vendor
 export const getVendorOrderById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const vendorId = req.user?._id;
-  const { orderId } = req.params;
+  const { id } = req.params;
   
   if (!vendorId) {
     return next(new AppError('Vendor not authenticated', 401));
   }
   
   const order = await Order.findOne({ 
-    _id: orderId,
-    'vendorProducts.vendorId': vendorId
-  }).populate({
-    path: 'vendorProducts.vendorProductId',
-    match: { vendorId: vendorId },
-    populate: {
-      path: 'productId',
-      select: 'name images'
-    }
-  }).populate({
-    path: 'user',
-    select: 'firstName lastName email phone'
+    _id: id
   });
   
   if (!order) {
     return next(new AppError('Order not found', 404));
+  }
+  
+  // Check if any vendor product in the order belongs to the vendor
+  const vendorProductIds = order.vendorProducts.map(item => item.vendorProductId);
+  const vendorProducts = await VendorProduct.find({
+    _id: { $in: vendorProductIds },
+    vendorId: vendorId
+  });
+  
+  if (vendorProducts.length === 0) {
+    return next(new AppError('Order not found or you do not have permission to view it', 404));
   }
   
   res.status(200).json(order);
@@ -777,7 +773,7 @@ export const updateOrderStatusVendor = catchAsyncError(async (req: Request, res:
   
   try {
     const vendorId = req.user?._id;
-    const { orderId } = req.params;
+    const { id } = req.params;
     const { status } = req.body;
     
     if (!vendorId) {
@@ -785,7 +781,7 @@ export const updateOrderStatusVendor = catchAsyncError(async (req: Request, res:
       session.endSession();
       return next(new AppError('Vendor not authenticated', 401));
     }
-    
+    console.log("OrderId",id)
     // Validate status
     const validStatuses = ['confirmed', 'processing', 'shipped', 'delivered'];
     if (!validStatuses.includes(status)) {
@@ -796,14 +792,27 @@ export const updateOrderStatusVendor = catchAsyncError(async (req: Request, res:
     
     // Find order
     const order = await Order.findOne({ 
-      _id: orderId,
-      'vendorProducts.vendorId': vendorId
+      _id: id
     }).session(session);
     
+    // Check if order exists
     if (!order) {
       await session.abortTransaction();
       session.endSession();
       return next(new AppError('Order not found', 404));
+    }
+    
+    // Check if any vendor product in the order belongs to the vendor
+    const vendorProductIds = order.vendorProducts.map(item => item.vendorProductId);
+    const vendorProducts = await VendorProduct.find({
+      _id: { $in: vendorProductIds },
+      vendorId: vendorId
+    }).session(session);
+    
+    if (vendorProducts.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new AppError('Order not found or you do not have permission to update it', 404));
     }
     
     // Check if status transition is valid
@@ -850,7 +859,6 @@ export const updateOrderStatusVendor = catchAsyncError(async (req: Request, res:
       message: 'Order status updated successfully',
       order: {
         _id: order._id,
-        orderId: order.orderId,
         orderStatus: order.orderStatus
       }
     });

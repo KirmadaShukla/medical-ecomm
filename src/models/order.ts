@@ -6,12 +6,9 @@ export interface IOrderItem {
   vendorProductId: mongoose.Types.ObjectId; // Reference to VendorProduct
   quantity: number;
   price: number; // Price at the time of order
-  productName: string;
-  productImage: string;
 }
 
 export interface IOrder extends Document {
-  orderId: string; // Custom order ID
   user: mongoose.Types.ObjectId; // Reference to User
   vendorProducts: IOrderItem[];
   totalAmount: number;
@@ -50,11 +47,6 @@ interface IOrderModel extends Model<IOrder> {
 }
 
 const OrderSchema: Schema = new Schema({
-  orderId: {
-    type: String,
-    unique: true,
-    required: true
-  },
   user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
@@ -75,13 +67,6 @@ const OrderSchema: Schema = new Schema({
       type: Number,
       required: true,
       min: 0
-    },
-    productName: {
-      type: String,
-      required: true
-    },
-    productImage: {
-      type: String
     }
   }],
   totalAmount: {
@@ -91,7 +76,7 @@ const OrderSchema: Schema = new Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['razorpay', 'cod', 'wallet'],
+    enum: ['razorpay', 'cod'],
     default: 'razorpay'
   },
   paymentStatus: {
