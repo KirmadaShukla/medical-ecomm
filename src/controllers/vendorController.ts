@@ -400,17 +400,17 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
     // Check if we need to prevent duplicate vendor products
     let shouldCheckDuplicate = false;
     if (!productId && globalProductId && !globalProductName) {
-      // For Case 1, we still need to check if admin already has this product
+      // For Case 1, we still need to check if vendor already has this product
       shouldCheckDuplicate = true;
     }
     
     if (!productId && !globalProductId && globalProductName) {
-      // For Case 4, we still need to check if admin already has this product
+      // For Case 4, we still need to check if vendor already has this product
       shouldCheckDuplicate = true;
     }
     
     if (shouldCheckDuplicate && product) {
-      // Check if admin already has this product (for cases other than Case 1)
+      // Check if vendor already has this product (for cases other than Case 1)
       const existingVendorProduct = await VendorProduct.findOne({
         productId: product._id,
         vendorId: req.user?.id
@@ -425,16 +425,16 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
     }
     
     // Calculate total price
-    const calculatedTotalPrice = (price || 0) + (shippingPrice || 0);
+    const calculatedTotalPrice = (Number(price) || 0) + (Number(shippingPrice) || 0);
     
     // Create vendor product with pending status and isActive flag
     const vendorProduct = new VendorProduct({
       productId: product?._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated user ID
-      price: price || 0, // Default to 0 if not provided
-      shippingPrice: shippingPrice || 0, // Default to 0 if not provided
+      price: Number(price) || 0, // Default to 0 if not provided
+      shippingPrice: Number(shippingPrice) || 0, // Default to 0 if not provided
       totalPrice: calculatedTotalPrice, // Calculate total price
-      stock: stock || 0, // Default to 0 if not provided
+      stock: Number(stock) || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
       status: 'pending', // Pending approval for both new and existing products
       isFeatured: isFeatured || false,
@@ -546,6 +546,8 @@ export const getVendorProducts = catchAsyncError(async (req: Request, res: Respo
         _id: 1,
         vendorId: 1,
         price: 1,
+        shippingPrice: 1,
+        totalPrice: 1,
         stock: 1,
         sku: 1,
         status: 1,
@@ -613,8 +615,8 @@ export const updateVendorProduct = catchAsyncError(async (req: Request, res: Res
   
   // Calculate total price if shippingPrice or price is updated
   if (shippingPrice !== undefined || req.body.price !== undefined) {
-    const newPrice = req.body.price !== undefined ? req.body.price : vendorProduct.price;
-    const newShippingPrice = shippingPrice !== undefined ? shippingPrice : vendorProduct.shippingPrice;
+    const newPrice = req.body.price !== undefined ? Number(req.body.price) : vendorProduct.price;
+    const newShippingPrice = shippingPrice !== undefined ? Number(shippingPrice) : vendorProduct.shippingPrice;
     vendorProduct.totalPrice = newPrice + newShippingPrice;
   }
   
@@ -627,7 +629,12 @@ export const updateVendorProduct = catchAsyncError(async (req: Request, res: Res
   
   // Update shippingPrice if provided
   if (shippingPrice !== undefined) {
-    vendorProduct.shippingPrice = shippingPrice;
+    vendorProduct.shippingPrice = Number(shippingPrice);
+  }
+  
+  // Update price if provided
+  if (req.body.price !== undefined) {
+    vendorProduct.price = Number(req.body.price);
   }
   
   // Set status to pending for admin review

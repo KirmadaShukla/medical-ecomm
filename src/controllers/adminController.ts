@@ -827,6 +827,8 @@ export const getAdminUploadedProducts = catchAsyncError(async (req: Request, res
       $project: {
         _id: 1,
         price: 1,
+        shippingPrice: 1,
+        totalPrice:1,
         stock: 1,
         sku: 1,
         status: 1,
@@ -1051,6 +1053,8 @@ export const getVendorProducts = catchAsyncError(async (req: Request, res: Respo
         _id: 1,
         vendorId: 1,
         price: 1,
+        shippingPrice: 1,
+        totoalPrice: 1,
         stock: 1,
         sku: 1,
         status: 1,
@@ -1098,25 +1102,12 @@ export const getVendorProducts = catchAsyncError(async (req: Request, res: Respo
 
 // Update vendor product status (approve/reject)
 export const updateVendorProductStatus = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { status, isActive, price, shippingPrice } = req.body;
+  const { status, isActive } = req.body;
   
   // Prepare update object
   const updateFields: any = {};
   if (status !== undefined) updateFields.status = status;
-  if (isActive !== undefined) updateFields.isActive = isActive;
-  if (price !== undefined) updateFields.price = price;
-  if (shippingPrice !== undefined) updateFields.shippingPrice = shippingPrice;
-  
-  // Calculate total price if price or shippingPrice is updated
-  if (price !== undefined || shippingPrice !== undefined) {
-    // First get the current vendor product to calculate the new total price
-    const vendorProduct = await VendorProduct.findById(req.params.id);
-    if (vendorProduct) {
-      const newPrice = price !== undefined ? price : vendorProduct.price;
-      const newShippingPrice = shippingPrice !== undefined ? shippingPrice : vendorProduct.shippingPrice;
-      updateFields.totalPrice = newPrice + newShippingPrice;
-    }
-  }
+  if (isActive !== undefined) updateFields.isActive = isActive
   
   const vendorProduct = await VendorProduct.findByIdAndUpdate(
     req.params.id,
@@ -1204,7 +1195,8 @@ export const getVendorSales = catchAsyncError(async (req: Request, res: Response
   const orders = await Order.find({
     'vendorProducts.vendorProductId': { $in: vendorProductIds },
     createdAt: { $gte: start, $lte: end },
-    paymentStatus: 'completed'
+    paymentStatus: 'completed',
+    orderStatus: 'delivered'
   });
   
   // Calculate total sales
