@@ -12,6 +12,8 @@ export interface IOrder extends Document {
   user: mongoose.Types.ObjectId; // Reference to User
   vendorProducts: IOrderItem[];
   totalAmount: number;
+  shippingPrice: number;
+  grandTotal: number;
   paymentMethod: 'razorpay' | 'cod' | 'wallet';
   paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
   razorpayPaymentId?: string;
@@ -72,6 +74,18 @@ const OrderSchema: Schema = new Schema({
   totalAmount: {
     type: Number,
     required: true,
+    min: 0
+  },
+  shippingPrice: {
+    type: Number,
+    required: true,
+    default: 0,
+    min: 0
+  },
+  grandTotal: {
+    type: Number,
+    required: true,
+    default: 0,
     min: 0
   },
   paymentMethod: {

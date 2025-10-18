@@ -11,6 +11,8 @@ export interface ICart extends Document {
   userId: mongoose.Types.ObjectId;
   items: ICartItem[];
   totalAmount: number;
+  shippingPrice: number;
+  grandTotal: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +45,16 @@ const CartSchema: Schema<ICart> = new Schema({
     type: Number,
     default: 0,
     min: 0
+  },
+  shippingPrice: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  grandTotal: {
+    type: Number,
+    default: 0,
+    min: 0
   }
 }, {
   timestamps: true
@@ -58,16 +70,20 @@ CartSchema.pre('save', async function(next) {
   }
 
   let total = 0;
+  let shippingTotal = 0;
   
   // Calculate total based on items and their prices
   for (const item of this.items) {
     const vendorProduct = await mongoose.model('VendorProduct').findById(item.vendorProductId);
     if (vendorProduct) {
       total += vendorProduct.price * item.quantity;
+      shippingTotal += vendorProduct.shippingPrice;
     }
   }
   
   this.totalAmount = total;
+  this.shippingPrice = shippingTotal;
+  this.grandTotal = total + shippingTotal;
   next();
 });
 

@@ -93,6 +93,7 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
     
     const orderItems: any[] = [];
     let totalAmount = 0;
+    let shippingPrice = 0;
     
     for (const item of vendorProducts) {
       const vendorProductDoc = vendorProductDocs.find(
@@ -115,6 +116,10 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       const itemTotal = vendorProductDoc.price * item.quantity;
       totalAmount += itemTotal;
       
+      // Calculate shipping cost
+      const itemShipping = vendorProductDoc.shippingPrice * item.quantity;
+      shippingPrice += itemShipping;
+      
       // Add to order items
       orderItems.push({
         vendorProductId: vendorProductDoc._id,
@@ -122,6 +127,9 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
         price: vendorProductDoc.price
       });
     }
+    
+    // Calculate grand total
+    const grandTotal = totalAmount + shippingPrice;
     
     // Set payment status based on payment method
     let paymentStatus = 'pending';
@@ -134,6 +142,8 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       user: userId,
       vendorProducts: orderItems,
       totalAmount,
+      shippingPrice,
+      grandTotal,
       paymentMethod,
       paymentStatus,
       orderStatus: 'pending',
@@ -148,7 +158,7 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
     let razorpayOrderId = null;
     if (paymentMethod === 'razorpay') {
       const razorpayOrder = await razorpay.orders.create({
-        amount: totalAmount * 100, // Razorpay expects amount in paise
+        amount: grandTotal * 100, // Razorpay expects amount in paise (using grandTotal)
         currency: 'INR',
         receipt: (order._id as mongoose.Types.ObjectId).toString(),
         notes: {
@@ -188,6 +198,8 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       order: {
         _id: order._id,
         totalAmount: order.totalAmount,
+        shippingPrice: order.shippingPrice,
+        grandTotal: order.grandTotal,
         razorpayOrderId: razorpayOrderId
       }
     });

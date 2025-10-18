@@ -19,7 +19,9 @@ export const getCart = catchAsyncError(async (req: Request, res: Response, next:
     const newCart = await Cart.create({
       userId: req.user._id,
       items: [],
-      totalAmount: 0
+      totalAmount: 0,
+      shippingPrice: 0,
+      grandTotal: 0
     });
     
     res.status(200).json({
