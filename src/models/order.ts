@@ -174,7 +174,6 @@ const OrderSchema: Schema = new Schema({
 
 // Add indexes
 OrderSchema.index({ user: 1 });
-OrderSchema.index({ orderId: 1 });
 OrderSchema.index({ orderStatus: 1 });
 OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ createdAt: -1 });
