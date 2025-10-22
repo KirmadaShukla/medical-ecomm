@@ -4,6 +4,29 @@ import Cart, { ICart } from '../models/cart';
 import VendorProduct from '../models/vendorProduct';
 import { catchAsyncError, AppError } from '../utils/errorHandler';
 
+// Helper function to calculate cart totals dynamically
+const calculateCartTotals = async (cart: ICart) => {
+  let totalAmount = 0;
+  let shippingPrice = 0;
+  
+  // Calculate totals based on current vendor product prices
+  for (const item of cart.items) {
+    const vendorProduct = await VendorProduct.findById(item.vendorProductId);
+    if (vendorProduct) {
+      totalAmount += vendorProduct.price * item.quantity;
+      shippingPrice += vendorProduct.shippingPrice;
+    }
+  }
+  
+  const grandTotal = totalAmount + shippingPrice;
+  
+  return {
+    totalAmount,
+    shippingPrice,
+    grandTotal
+  };
+};
+
 // Get user's cart
 export const getCart = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const cart = await Cart.findOne({ userId: req.user._id }).populate({
@@ -18,22 +41,32 @@ export const getCart = catchAsyncError(async (req: Request, res: Response, next:
     // Create an empty cart if it doesn't exist
     const newCart = await Cart.create({
       userId: req.user._id,
-      items: [],
-      totalAmount: 0,
-      shippingPrice: 0,
-      grandTotal: 0
+      items: []
     });
     
     res.status(200).json({
       success: true,
-      data: newCart
+      data: {
+        ...newCart.toObject(),
+        totalAmount: 0,
+        shippingPrice: 0,
+        grandTotal: 0
+      }
     });
     return;
   }
 
+  // Calculate totals dynamically
+  const { totalAmount, shippingPrice, grandTotal } = await calculateCartTotals(cart);
+
   res.status(200).json({
     success: true,
-    data: cart
+    data: {
+      ...cart.toObject(),
+      totalAmount,
+      shippingPrice,
+      grandTotal
+    }
   });
 });
 
@@ -88,7 +121,7 @@ export const addItemToCart = catchAsyncError(async (req: Request, res: Response,
     });
   }
 
-  // Save cart (pre-save hook will calculate totalAmount)
+  // Save cart (without pre-save hook for calculating totals)
   await cart.save();
 
   // Populate the cart with product details
@@ -100,9 +133,17 @@ export const addItemToCart = catchAsyncError(async (req: Request, res: Response,
     ]
   });
 
+  // Calculate totals dynamically
+  const { totalAmount, shippingPrice, grandTotal } = await calculateCartTotals(cart);
+
   res.status(200).json({
     success: true,
-    data: cart
+    data: {
+      ...cart.toObject(),
+      totalAmount,
+      shippingPrice,
+      grandTotal
+    }
   });
 });
 
@@ -154,7 +195,7 @@ export const updateCartItem = catchAsyncError(async (req: Request, res: Response
   // Update quantity
   cart.items[itemIndex].quantity = quantity;
 
-  // Save cart (pre-save hook will calculate totalAmount)
+  // Save cart (without pre-save hook for calculating totals)
   await cart.save();
 
   // Populate the cart with product details
@@ -166,9 +207,17 @@ export const updateCartItem = catchAsyncError(async (req: Request, res: Response
     ]
   });
 
+  // Calculate totals dynamically
+  const { totalAmount, shippingPrice, grandTotal } = await calculateCartTotals(cart);
+
   res.status(200).json({
     success: true,
-    data: cart
+    data: {
+      ...cart.toObject(),
+      totalAmount,
+      shippingPrice,
+      grandTotal
+    }
   });
 });
 
@@ -200,7 +249,7 @@ export const removeItemFromCart = catchAsyncError(async (req: Request, res: Resp
   // Remove item from cart
   cart.items.splice(itemIndex, 1);
 
-  // Save cart (pre-save hook will calculate totalAmount)
+  // Save cart (without pre-save hook for calculating totals)
   await cart.save();
 
   // Populate the cart with product details
@@ -212,9 +261,17 @@ export const removeItemFromCart = catchAsyncError(async (req: Request, res: Resp
     ]
   });
 
+  // Calculate totals dynamically
+  const { totalAmount, shippingPrice, grandTotal } = await calculateCartTotals(cart);
+
   res.status(200).json({
     success: true,
-    data: cart
+    data: {
+      ...cart.toObject(),
+      totalAmount,
+      shippingPrice,
+      grandTotal
+    }
   });
 });
 
@@ -231,6 +288,12 @@ export const clearCart = catchAsyncError(async (req: Request, res: Response, nex
 
   res.status(200).json({
     success: true,
+    data: {
+      ...cart.toObject(),
+      totalAmount: 0,
+      shippingPrice: 0,
+      grandTotal: 0
+    },
     message: 'Cart cleared successfully'
   });
 });

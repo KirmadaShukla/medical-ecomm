@@ -117,7 +117,7 @@ export const createOrder = catchAsyncError(async (req: Request, res: Response, n
       totalAmount += itemTotal;
       
       // Calculate shipping cost
-      const itemShipping = vendorProductDoc.shippingPrice * item.quantity;
+      const itemShipping = vendorProductDoc.shippingPrice
       shippingPrice += itemShipping;
       
       // Add to order items
