@@ -418,12 +418,17 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       category, 
       brand, 
       price, 
+      discount = 0, // Add discount field with default value
       shippingPrice = 0,
       stock, 
       sku, 
       globalProductId, 
       globalProductName,
-      isActive 
+      isActive,
+      isOnSale,
+      isBestSeller,
+      isNewArrival,
+      isLimitedEdition
     } = req.body;
     
     let product;
@@ -675,20 +680,26 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       }
     }
     
-    // Calculate total price
-    const calculatedTotalPrice = (price || 0) + (shippingPrice || 0);
+    // Calculate total price based on price, discount, and shippingPrice
+    const discountedPrice = (price || 0) * (1 - (discount || 0) / 100);
+    const calculatedTotalPrice = Math.round((discountedPrice + (shippingPrice || 0)) * 100) / 100;
     
     // Create vendor product with approved status since admin is adding it
     const vendorProduct = new VendorProduct({
       productId: product?._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated admin ID
       price: price || 0, // Default to 0 if not provided
+      discount: discount || 0, // Add discount field
       shippingPrice: shippingPrice || 0, // Default to 0 if not provided
       totalPrice: calculatedTotalPrice, // Calculate total price
       stock: stock || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
       status: 'approved', // Approved by default since admin is adding it
-      isActive: isActive !== undefined ? isActive : true // Use provided isActive or default to true
+      isActive: isActive !== undefined ? isActive : true, // Use provided isActive or default to true
+      isOnSale: isOnSale || false,
+      isBestSeller: isBestSeller || false,
+      isNewArrival: isNewArrival || false,
+      isLimitedEdition: isLimitedEdition || false
     });
     
     await vendorProduct.save({ session });
@@ -883,22 +894,32 @@ export const updateAdminUploadedProducts = catchAsyncError(async (req: Request, 
   }
   
   // Update the vendor product fields
-  const { price, stock, sku, status, isFeatured, isActive, shippingPrice } = req.body;
+  const { price, discount, stock, sku, status, isFeatured, isActive, shippingPrice, isOnSale, isBestSeller, isNewArrival, isLimitedEdition } = req.body;
   
-  // Calculate total price if shippingPrice or price is updated
-  if (shippingPrice !== undefined || price !== undefined) {
+  // Calculate total price if shippingPrice, price, or discount is updated
+  if (shippingPrice !== undefined || price !== undefined || discount !== undefined) {
     const newPrice = price !== undefined ? price : vendorProduct.price;
+    const newDiscount = discount !== undefined ? discount : vendorProduct.discount;
     const newShippingPrice = shippingPrice !== undefined ? shippingPrice : vendorProduct.shippingPrice;
-    vendorProduct.totalPrice = newPrice + newShippingPrice;
+    
+    // Calculate discounted price
+    const discountedPrice = newPrice * (1 - (newDiscount || 0) / 100);
+    // Calculate total price (discounted price + shipping)
+    vendorProduct.totalPrice = Math.round((discountedPrice + newShippingPrice) * 100) / 100;
   }
   
   if (price !== undefined) vendorProduct.price = price;
+  if (discount !== undefined) vendorProduct.discount = discount; // Add discount field handling
   if (stock !== undefined) vendorProduct.stock = stock;
   if (sku !== undefined) vendorProduct.sku = sku;
   if (status !== undefined) vendorProduct.status = status;
   if (isFeatured !== undefined) vendorProduct.isFeatured = isFeatured;
   if (isActive !== undefined) vendorProduct.isActive = isActive;
   if (shippingPrice !== undefined) vendorProduct.shippingPrice = shippingPrice;
+  if (isOnSale !== undefined) vendorProduct.isOnSale = isOnSale;
+  if (isBestSeller !== undefined) vendorProduct.isBestSeller = isBestSeller;
+  if (isNewArrival !== undefined) vendorProduct.isNewArrival = isNewArrival;
+  if (isLimitedEdition !== undefined) vendorProduct.isLimitedEdition = isLimitedEdition;
   
   await vendorProduct.save();
 

@@ -13,6 +13,7 @@ export interface IVendorProduct extends Document {
   vendorId: mongoose.Types.ObjectId; // Reference to Vendor
   globalProductId?: mongoose.Types.ObjectId; // Reference to GlobalProduct
   price: number;
+  discount: number; // Discount percentage (0-100)
   shippingPrice: number;
   totalPrice: number;
   stock: number;
@@ -20,6 +21,11 @@ export interface IVendorProduct extends Document {
   status: 'pending' | 'approved' | 'rejected';
   isFeatured: boolean;
   isActive: boolean;
+  // Additional product tags
+  isOnSale: boolean;
+  isBestSeller: boolean;
+  isNewArrival: boolean;
+  isLimitedEdition: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +55,13 @@ const VendorProductSchema: Schema = new Schema({
     type: Number, 
     required: true,
     min: 0,
+    default: 0
+  },
+  discount: { 
+    type: Number, 
+    required: false,
+    min: 0,
+    max: 100,
     default: 0
   },
   shippingPrice: { 
@@ -92,9 +105,35 @@ const VendorProductSchema: Schema = new Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  // Additional product tags
+  isOnSale: {
+    type: Boolean,
+    default: false
+  },
+  isBestSeller: {
+    type: Boolean,
+    default: false
+  },
+  isNewArrival: {
+    type: Boolean,
+    default: false
+  },
+  isLimitedEdition: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
+});
+
+// Add a pre-save hook to calculate totalPrice based on price, discount, and shippingPrice
+VendorProductSchema.pre<IVendorProduct>('save', function(next) {
+  // Calculate discounted price
+  const discountedPrice = this.price * (1 - (this.discount || 0) / 100);
+  // Calculate total price (discounted price + shipping)
+  this.totalPrice = Math.round((discountedPrice + this.shippingPrice) * 100) / 100;
+  next();
 });
 
 // Add pagination plugins

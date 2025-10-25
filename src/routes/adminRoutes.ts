@@ -40,6 +40,8 @@ import {
   getVendorPayments
 } from '../controllers/adminController';
 import { isAuthenticated, isAdmin } from '../middleware/auth';
+import { validate } from '../middleware/validation';
+import { addProductSchema, adminUpdateProductSchema } from '../validation/vendorProductValidation';
 
 const router = Router();
 
@@ -67,13 +69,13 @@ router.delete('/brands/:id', isAuthenticated, isAdmin, deleteBrand);
 // Product routes
 router.get('/products', isAuthenticated, isAdmin, getProducts);
 router.get('/products/:id', isAuthenticated, isAdmin, getProductById);
-router.post('/products', isAuthenticated, isAdmin, addProduct); // Using the unified function
+router.post('/products', isAuthenticated, isAdmin, validate(addProductSchema), addProduct); // Using the unified function
 router.put('/products/:id', isAuthenticated, isAdmin, updateProduct);
 router.delete('/products/:id', isAuthenticated, isAdmin, deleteProduct);
 router.delete('/products/:productId/images/:imagePublicId', isAuthenticated, isAdmin, deleteProductImage);
 
 router.get('/get-admin-products',isAuthenticated,isAdmin,getAdminUploadedProducts)
-router.put('/update-admin-products/:id',isAuthenticated,isAdmin,updateAdminUploadedProducts)
+router.put('/update-admin-products/:id',isAuthenticated,isAdmin,validate(adminUpdateProductSchema),updateAdminUploadedProducts)
 router.delete('/delete-admin-product/:id',isAuthenticated,isAdmin,deleteAdminUploadedProduct)
 // Vendor product routes
 router.get('/vendor-products', isAuthenticated, isAdmin, getVendorProducts);

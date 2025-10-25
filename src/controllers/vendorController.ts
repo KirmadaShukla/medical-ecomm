@@ -27,12 +27,6 @@ export const registerVendor = catchAsyncError(async (req: Request, res: Response
     bankAccount
   } = req.body;
   
-  // Basic validation
-  if (!firstName || !lastName || !email || !password || !businessName || 
-      !businessLicense || !businessAddress || !businessPhone) {
-    return next(new AppError('Missing required fields: firstName, lastName, email, password, businessName, businessLicense, businessAddress, businessPhone', 400));
-  }
-  
   // Check if vendor with this email already exists
   const existingVendor = await Vendor.findOne({ businessEmail: email });
   if (existingVendor) {
@@ -78,11 +72,6 @@ export const registerVendor = catchAsyncError(async (req: Request, res: Response
 export const vendorLogin = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { businessEmail, password } = req.body;
   
-  // Basic validation
-  if (!businessEmail || !password) {
-    return next(new AppError('Please provide email and password', 400));
-  }
-  
   // Find vendor user by email and select password
   const user = await Vendor.findOne({ businessEmail, role: 'vendor' }).select('+password');
   
@@ -96,7 +85,6 @@ export const vendorLogin = catchAsyncError(async (req: Request, res: Response, n
   if (!isPasswordCorrect) {
     return next(new AppError('Invalid email or password', 401));
   }
-  
       
   // Generate vendor token
   const token = generateVendorToken(user);
@@ -166,13 +154,18 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       category, 
       brand, 
       price, 
+      discount = 0, // Add discount field with default value of 0
       shippingPrice = 0,
       stock, 
       sku, 
       globalProductId, 
       globalProductName,
       isFeatured,
-      isActive
+      isActive,
+      isOnSale,
+      isBestSeller,
+      isNewArrival,
+      isLimitedEdition
     } = req.body;
     
     let product;
@@ -424,21 +417,22 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       }
     }
     
-    // Calculate total price
-    const calculatedTotalPrice = (Number(price) || 0) + (Number(shippingPrice) || 0);
-    
     // Create vendor product with pending status and isActive flag
     const vendorProduct = new VendorProduct({
       productId: product?._id as mongoose.Types.ObjectId,
       vendorId: req.user?._id, // Use authenticated user ID
       price: Number(price) || 0, // Default to 0 if not provided
+      discount: Number(discount) || 0, // Add discount field
       shippingPrice: Number(shippingPrice) || 0, // Default to 0 if not provided
-      totalPrice: calculatedTotalPrice, // Calculate total price
       stock: Number(stock) || 0, // Default to 0 if not provided
       sku: sku || `SKU-${Date.now()}`, // Generate a default SKU if not provided
       status: 'pending', // Pending approval for both new and existing products
       isFeatured: isFeatured || false,
-      isActive: isActive !== undefined ? isActive : true // Use provided isActive or default to true
+      isActive: isActive !== undefined ? isActive : true, // Use provided isActive or default to true
+      isOnSale: isOnSale || false,
+      isBestSeller: isBestSeller || false,
+      isNewArrival: isNewArrival || false,
+      isLimitedEdition: isLimitedEdition || false
     });
     
     await vendorProduct.save({ session });
@@ -559,15 +553,7 @@ export const getVendorProducts = catchAsyncError(async (req: Request, res: Respo
           name: 1,
           description: 1,
           images: 1,
-          isActive: 1,
-          categoryDetails: {
-            _id: 1,
-            name: 1
-          },
-          brandDetails: {
-            _id: 1,
-            name: 1
-          }
+          isActive: 1
         },
         categoryDetails: {
           _id: 1,
@@ -611,26 +597,51 @@ export const updateVendorProduct = catchAsyncError(async (req: Request, res: Res
   
   // Update the vendor product fields
   // Handle isActive separately to ensure it's properly managed
-  const { isActive, shippingPrice, ...otherFields } = req.body;
+  const { isActive, shippingPrice, price, discount, isOnSale, isBestSeller, isNewArrival, isLimitedEdition, ...otherFields } = req.body;
   
-  // Calculate total price if shippingPrice or price is updated
-  if (shippingPrice !== undefined || req.body.price !== undefined) {
-    const newPrice = req.body.price !== undefined ? Number(req.body.price) : vendorProduct.price;
+  // Calculate total price if shippingPrice, price, or discount is updated
+  if (shippingPrice !== undefined || price !== undefined || discount !== undefined) {
+    const newPrice = price !== undefined ? Number(price) : vendorProduct.price;
+    const newDiscount = discount !== undefined ? Number(discount) : vendorProduct.discount;
     const newShippingPrice = shippingPrice !== undefined ? Number(shippingPrice) : vendorProduct.shippingPrice;
-    vendorProduct.totalPrice = newPrice + newShippingPrice;
+    
+    // Calculate discounted price
+    const discountedPrice = newPrice * (1 - (newDiscount || 0) / 100);
+    // Calculate total price (discounted price + shipping)
+    vendorProduct.totalPrice = Math.round((discountedPrice + newShippingPrice) * 100) / 100;
   }
   
-  Object.assign(vendorProduct, otherFields);
-  
-  // Update shippingPrice if provided
+  // Update fields if provided
   if (shippingPrice !== undefined) {
     vendorProduct.shippingPrice = Number(shippingPrice);
   }
   
-  // Update price if provided
-  if (req.body.price !== undefined) {
-    vendorProduct.price = Number(req.body.price);
+  if (price !== undefined) {
+    vendorProduct.price = Number(price);
   }
+  
+  if (discount !== undefined) {
+    vendorProduct.discount = Number(discount);
+  }
+  
+  if (isOnSale !== undefined) {
+    vendorProduct.isOnSale = isOnSale;
+  }
+  
+  if (isBestSeller !== undefined) {
+    vendorProduct.isBestSeller = isBestSeller;
+  }
+  
+  if (isNewArrival !== undefined) {
+    vendorProduct.isNewArrival = isNewArrival;
+  }
+  
+  if (isLimitedEdition !== undefined) {
+    vendorProduct.isLimitedEdition = isLimitedEdition;
+  }
+  
+  // Apply other fields
+  Object.assign(vendorProduct, otherFields);
   
   // Note: isActive logic has been removed from here and moved to a separate endpoint
   // This prevents requiring admin approval for simple updates

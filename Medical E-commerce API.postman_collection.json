@@ -3164,6 +3164,682 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Global Product Management",
+			"item": [
+				{
+					"name": "Get All Global Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/global-products?page=1&limit=10&search=mask",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-products"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": "mask"
+								}
+							]
+						},
+						"description": "Get all global products with pagination and search"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Global Product by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/global-products/:globalProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-products",
+								":globalProductId"
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get a specific global product by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Products by Global Product",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/global-products/:globalProductId/products?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-products",
+								":globalProductId",
+								"products"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get all products associated with a global product"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Global Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Protective Masks\",\n  \"productIds\": [],\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/global-products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-products"
+							]
+						},
+						"description": "Create a new global product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Global Product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Protective Masks\",\n  \"isActive\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/global-products/:globalProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-products",
+								":globalProductId"
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update a global product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Global Product",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/global-products/:globalProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-products",
+								":globalProductId"
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Delete a global product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Product to Global Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"globalProductId\": \"{{global_product_id}}\",\n  \"productId\": \"{{product_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/global-products/add-product",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-products",
+								"add-product"
+							]
+						},
+						"description": "Add a product to a global product (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Product from Global Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"globalProductId\": \"{{global_product_id}}\",\n  \"productId\": \"{{product_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/global-products/remove-product",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-products",
+								"remove-product"
+							]
+						},
+						"description": "Remove a product from a global product (admin only)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Cart Management",
+			"item": [
+				{
+					"name": "Get User Cart",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/cart",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"cart"
+							]
+						},
+						"description": "Get the authenticated user's cart"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Item to Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"vendorProductId\": \"{{vendor_product_id}}\",\n  \"quantity\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cart/items",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"cart",
+								"items"
+							]
+						},
+						"description": "Add an item to the user's cart"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Cart Item",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 3\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/cart/items/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"cart",
+								"items",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update the quantity of an item in the user's cart"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Item from Cart",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/cart/items/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"cart",
+								"items",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Remove an item from the user's cart"
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Cart",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/cart",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"cart"
+							]
+						},
+						"description": "Clear all items from the user's cart"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Wishlist Management",
+			"item": [
+				{
+					"name": "Get User Wishlist",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/wishlist",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"wishlist"
+							]
+						},
+						"description": "Get the authenticated user's wishlist"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Item to Wishlist",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"vendorProductId\": \"{{vendor_product_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/wishlist/items",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"wishlist",
+								"items"
+							]
+						},
+						"description": "Add an item to the user's wishlist"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Item from Wishlist",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/wishlist/items/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"wishlist",
+								"items",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Remove an item from the user's wishlist"
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Wishlist",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/wishlist",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"wishlist"
+							]
+						},
+						"description": "Clear all items from the user's wishlist"
+					},
+					"response": []
+				},
+				{
+					"name": "Check Item in Wishlist",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/wishlist/check/:vendorProductId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"wishlist",
+								"check",
+								":vendorProductId"
+							],
+							"variable": [
+								{
+									"key": "vendorProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Check if an item exists in the user's wishlist"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Global Product Search for Vendors",
+			"item": [
+				{
+					"name": "Search Global Products for Vendor",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{vendor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/global-product-search/search?query=mask&page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-product-search",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "mask"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Search global products for vendors to link to"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Vendor Products by Global Product",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{vendor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/global-product-search/vendor/:globalProductId/products?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-product-search",
+								"vendor",
+								":globalProductId",
+								"products"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get vendor's products linked to a specific global product"
+					},
+					"response": []
+				},
+				{
+					"name": "Check Global Product Availability",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{vendor_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/global-product-search/vendor/:globalProductId/availability",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"global-product-search",
+								"vendor",
+								":globalProductId",
+								"availability"
+							],
+							"variable": [
+								{
+									"key": "globalProductId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Check if vendor already has a product linked to a global product"
+					},
+					"response": []
+				}
+			]
 		}
 	]
 }
