@@ -4,12 +4,31 @@ import { generateUserToken } from '../utils/tokenUtils';
 import { catchAsyncError, AppError } from '../utils/errorHandler';
 
 export const getUsers = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const users = await User.find();
+  const users = await User.find({}, { 
+    email: 1, 
+    firstName: 1, 
+    lastName: 1, 
+    status: 1, 
+    role: 1 
+  });
   res.status(200).json(users);
 });
 
 export const getUserById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.user._id, { 
+    email: 1, 
+    firstName: 1, 
+    lastName: 1, 
+    status: 1, 
+    role: 1,
+    dateOfBirth: 1,
+    phoneNumber: 1,
+    address: 1,
+    city: 1,
+    state: 1,
+    zipCode: 1,
+    country: 1
+  });
   if (!user) {
     return next(new AppError('User not found', 404));
   }
@@ -157,13 +176,25 @@ export const getUsersByRole = catchAsyncError(async (req: Request, res: Response
     return next(new AppError('Invalid user role', 400));
   }
   
-  const users = await User.find({ role });
+  const users = await User.find({ role }, { 
+    email: 1, 
+    firstName: 1, 
+    lastName: 1, 
+    status: 1, 
+    role: 1 
+  });
   res.status(200).json(users);
 });
 
 // Get active users
 export const getActiveUsers = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const users = await User.find({ status: UserStatus.ACTIVE });
+  const users = await User.find({ status: UserStatus.ACTIVE }, { 
+    email: 1, 
+    firstName: 1, 
+    lastName: 1, 
+    status: 1, 
+    role: 1 
+  });
   res.status(200).json(users);
 });
 

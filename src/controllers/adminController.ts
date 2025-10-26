@@ -12,7 +12,7 @@ import VendorPayment from '../models/vendorPayment';
 import Order from '../models/order';
 import { generateAdminToken } from '../utils/tokenUtils';
 import { AppError, catchAsyncError } from '../utils/errorHandler';
-import { uploadProductImages } from '../utils/cloudinary';
+import { uploadBrandImages, uploadProductImages } from '../utils/cloudinary';
 import { deleteFromCloudinary } from '../utils/cloudinary';
 import mongoose from 'mongoose';
 
@@ -180,15 +180,124 @@ export const getBrandById = catchAsyncError(async (req: Request, res: Response, 
 });
 
 export const createBrand = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const brand = new Brand(req.body);
+  const { name, description, isActive, sortOrder } = req.body;
+  
+  // Handle logo upload
+  let processedLogo: { url: string; publicId: string; alt?: string } | null = null;
+  
+  if (req.files && req.files.logo) {
+    const filesArray = Array.isArray(req.files.logo) ? req.files.logo : [req.files.logo];
+    // Generate a temporary ID for folder structure
+    const tempBrandId = new mongoose.Types.ObjectId().toString();
+    const processedImages = await uploadBrandImages(filesArray, tempBrandId);
+    processedLogo = processedImages[0] || null;
+  } else if (req.body.logo) {
+    // Handle existing logo URL
+    const logo = req.body.logo;
+    if (typeof logo === 'string') {
+      processedLogo = {
+        url: logo,
+        publicId: 'default_public_id',
+        alt: name || 'Brand logo'
+      };
+    } else if (typeof logo === 'object' && logo.url) {
+      processedLogo = {
+        url: logo.url,
+        publicId: logo.publicId || 'default_public_id',
+        alt: logo.alt || name || 'Brand logo'
+      };
+    }
+  }
+  
+  const brandData: any = {
+    name,
+    description,
+    isActive: isActive !== undefined ? isActive : true,
+    sortOrder: sortOrder || 0
+  };
+  
+  // Add logo if it exists
+  if (processedLogo) {
+    brandData.logo = processedLogo;
+  }
+  
+  const brand: any = new Brand(brandData);
   await brand.save();
+  
+  // Update the logo folder path with the actual brand ID
+  if (processedLogo && req.files && req.files.logo) {
+    try {
+      // Delete the temporary logo
+      await deleteFromCloudinary(processedLogo.publicId);
+      
+      // Upload again with correct folder path
+      const filesArray = Array.isArray(req.files.logo) ? req.files.logo : [req.files.logo];
+      const processedImages = await uploadBrandImages(filesArray, (brand._id as mongoose.Types.ObjectId).toString());
+      const newLogo = processedImages[0] || null;
+      
+      if (newLogo) {
+        brand.logo = newLogo;
+        await brand.save();
+      }
+    } catch (error) {
+      console.error('Error updating brand logo folder path:', error);
+    }
+  }
+  
   res.status(201).json(brand);
 });
 
 export const updateBrand = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { id } = req.params;
+  const { name, description, isActive, sortOrder } = req.body;
+  
+  const updateFields: any = {};
+  
+  if (name !== undefined) updateFields.name = name;
+  if (description !== undefined) updateFields.description = description;
+  if (isActive !== undefined) updateFields.isActive = isActive;
+  if (sortOrder !== undefined) updateFields.sortOrder = sortOrder;
+  
+  // Handle logo update
+  if (req.files && req.files.logo) {
+    const filesArray = Array.isArray(req.files.logo) ? req.files.logo : [req.files.logo];
+    const processedImages = await uploadBrandImages(filesArray, id);
+    const processedLogo = processedImages[0] || null;
+    
+    if (processedLogo) {
+      // Delete old logo from Cloudinary
+      const oldBrand = await Brand.findById(id);
+      if (oldBrand && oldBrand.logo && oldBrand.logo.publicId) {
+        try {
+          await deleteFromCloudinary(oldBrand.logo.publicId);
+        } catch (error) {
+          console.error('Error deleting old logo from Cloudinary:', error);
+        }
+      }
+      
+      updateFields.logo = processedLogo;
+    }
+  } else if (req.body.logo) {
+    // Handle existing logo URL
+    const logo = req.body.logo;
+    if (typeof logo === 'string') {
+      updateFields.logo = {
+        url: logo,
+        publicId: 'default_public_id',
+        alt: name || 'Brand logo'
+      };
+    } else if (typeof logo === 'object' && logo.url) {
+      updateFields.logo = {
+        url: logo.url,
+        publicId: logo.publicId || 'default_public_id',
+        alt: logo.alt || name || 'Brand logo'
+      };
+    }
+  }
+  
   const brand = await Brand.findByIdAndUpdate(
-    req.params.id,
-    req.body,
+    id,
+    updateFields,
     { new: true, runValidators: true }
   );
   
@@ -200,11 +309,23 @@ export const updateBrand = catchAsyncError(async (req: Request, res: Response, n
 });
 
 export const deleteBrand = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const brand = await Brand.findByIdAndDelete(req.params.id);
+  const brand = await Brand.findById(req.params.id);
   
   if (!brand) {
     return next(new AppError('Brand not found', 404));
   }
+  
+  // Delete logo from Cloudinary if it exists
+  if (brand.logo && brand.logo.publicId) {
+    try {
+      await deleteFromCloudinary(brand.logo.publicId);
+    } catch (error) {
+      console.error('Error deleting logo from Cloudinary:', error);
+    }
+  }
+  
+  // Delete the brand from database
+  await Brand.findByIdAndDelete(req.params.id);
   
   res.status(200).json({ message: 'Brand deleted successfully' });
 });
@@ -335,7 +456,6 @@ export const getProductById = catchAsyncError(async (req: Request, res: Response
       }
     }
   ]);
-  console.log(product);
   if (!product || product.length === 0) {
     return next(new AppError('Product not found', 404));
   }
@@ -343,73 +463,11 @@ export const getProductById = catchAsyncError(async (req: Request, res: Response
   res.status(200).json(product[0]);
 });
 
-// Helper function to handle global product logic
-const handleGlobalProduct = async (product: any, globalProductId?: string, globalProductName?: string, session?: any) => {
-  let globalProduct;
-  
-  if (globalProductId && !product) {
-    // Case 1: Global product ID exists but product doesn't exist
-    // Create a new product and associate it with the existing global product
-    globalProduct = await GlobalProduct.findById(globalProductId).session(session || undefined);
-    if (globalProduct) {
-      // Create a new product since it doesn't exist
-      // This case should be handled in the main function where product creation happens
-      // Here we just return the global product for reference
-      return globalProduct;
-    }
-  } else if (!globalProductId && product && globalProductName) {
-    // Case 2: Product exists but global product ID doesn't exist, global product name is provided
-    // Create a new global product and associate it with the existing product
-    globalProduct = new GlobalProduct({
-      name: globalProductName,
-      productIds: [product._id as mongoose.Types.ObjectId],
-      isActive: true
-    });
-    
-    await globalProduct.save({ session });
-    
-    // Set the global product reference on the product
-    product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-    await product.save({ session });
-  } else if (globalProductId && product) {
-    // Case 3: Both global product ID and product exist
-    // Associate them if not already associated
-    globalProduct = await GlobalProduct.findById(globalProductId).session(session || undefined);
-    if (globalProduct) {
-      // Add product to global product if not already there
-      const productIdStr = (product._id as mongoose.Types.ObjectId).toString();
-      if (!globalProduct.productIds.map(id => id.toString()).includes(productIdStr)) {
-        globalProduct.productIds.push(product._id as mongoose.Types.ObjectId);
-        await globalProduct.save({ session });
-      }
-      // Set the global product reference on the product if not already set
-      if (!product.globalProduct) {
-        product.globalProduct = globalProduct._id as mongoose.Types.ObjectId;
-        await product.save({ session });
-      }
-    }
-  } else if (!globalProductId && !product && globalProductName) {
-    // Case 4: Neither global product ID nor product exist, but global product name is provided
-    // Create both new product and new global product
-    globalProduct = new GlobalProduct({
-      name: globalProductName,
-      productIds: [], // Will be populated after product creation
-      isActive: true
-    });
-    
-    await globalProduct.save({ session });
-    // Product will be created in the main function and then associated
-    return globalProduct;
-  }
-  
-  return globalProduct;
-};
 
 // Unified function to add products (both new and existing) - for admins
 export const addProduct = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  console.log(req.body)
   try {
     const { 
       productId, // If provided, it's an existing product
@@ -971,19 +1029,6 @@ export const getVendorById = catchAsyncError(async (req: Request, res: Response,
 
 // Update vendor status (approve/reject/suspend)
 export const updateVendorStatus = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  console.log('=== VENDOR STATUS UPDATE DEBUG INFO ===');
-  console.log('Request body:', req.body);
-  console.log('Request body type:', typeof req.body);
-  console.log('Request body keys:', Object.keys(req.body));
-  console.log('Request body length:', Object.keys(req.body).length);
-  console.log('Request params:', req.params);
-  console.log('Request param id:', req.params.id);
-  console.log('Content-Type header:', req.headers['content-type']);
-  console.log('All headers:', req.headers);
-  console.log('Method:', req.method);
-  console.log('URL:', req.url);
-  console.log('Raw request dump:', inspect(req, { depth: 1, colors: false }));
-  
   // Check if body exists and is properly parsed
   if (!req.body || Object.keys(req.body).length === 0) {
     return next(new AppError('Request body is required and must contain status field', 400));

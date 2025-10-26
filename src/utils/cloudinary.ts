@@ -125,4 +125,31 @@ export const uploadMultipleToCloudinary = async (
   return Promise.all(uploadPromises);
 };
 
+/**
+ * Uploads brand logo images to Cloudinary
+ * @param files - Array of file objects from express-fileupload
+ * @param brandId - Brand ID for folder structure
+ * @returns Promise with array of upload results
+ */
+export const uploadBrandImages = async (
+  files: any[],
+  brandId: string
+): Promise<{ url: string; publicId: string; alt?: string }[]> => {
+  // Create folder path: brands/brandId
+  const folderPath = `brands/${brandId}`;
+  
+  const uploadPromises = files.map(async (file) => {
+    // Upload each file to the specific folder
+    const result = await uploadToCloudinary(file.data, folderPath);
+    
+    return {
+      url: result.url,
+      publicId: result.publicId,
+      alt: file.name || 'Brand logo'
+    };
+  });
+  
+  return Promise.all(uploadPromises);
+};
+
 export default cloudinary;

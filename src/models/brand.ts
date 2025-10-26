@@ -12,7 +12,6 @@ export interface IBrand extends Document {
   name: string;
   description?: string;
   logo?: IBrandImage; // Brand logo with Cloudinary info
-  website?: string;
   isActive: boolean;
   sortOrder: number;
   createdAt: Date;
@@ -39,10 +38,6 @@ const BrandSchema: Schema = new Schema({
       type: String
     },
     alt: { type: String },
-  },
-  website: { 
-    type: String,
-    match: [/^https?:\/\/.+$/, 'Please enter a valid URL']
   },
   isActive: {
     type: Boolean,

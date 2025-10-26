@@ -19,6 +19,27 @@ export interface IProduct extends Document {
   updatedAt: Date;
 }
 
+// Interface for products with populated brand and category details
+export interface IProductPopulated extends Document {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  description?: string;
+  category: mongoose.Types.ObjectId;
+  brand?: mongoose.Types.ObjectId;
+  globalProduct?: mongoose.Types.ObjectId;
+  images: IProductImage[];
+  createdAt: Date;
+  updatedAt: Date;
+  categoryDetails?: {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+  };
+  brandDetails?: {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+  };
+}
+
 // Extend the model interface to include aggregatePaginate
 interface IProductModel extends Model<IProduct> {
   aggregatePaginate: typeof aggregatePaginate;
