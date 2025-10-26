@@ -6,7 +6,11 @@ import {
   searchProducts,
   getFeaturedProducts,
   getFilters,
-  getAllProductsPost
+  getAllProductsPost,
+  getProductsOnSale,
+  getBestSellerProducts,
+  getNewArrivalProducts,
+  getLimitedEditionProducts
 } from '../controllers/productController';
 
 const router = Router();
@@ -14,6 +18,10 @@ const router = Router();
 // Public routes
 router.post('/products', getAllProductsPost);
 router.get('/products/featured', getFeaturedProducts);
+router.get('/products/on-sale', getProductsOnSale);
+router.get('/products/best-seller', getBestSellerProducts);
+router.get('/products/new-arrival', getNewArrivalProducts);
+router.get('/products/limited-edition', getLimitedEditionProducts);
 router.get('/products/filters', getFilters);
 router.get('/products/search', searchProducts);
 router.get('/products/category/:categoryId', getProductsByCategory);

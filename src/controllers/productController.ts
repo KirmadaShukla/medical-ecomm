@@ -899,3 +899,499 @@ export const getFilters = catchAsyncError(async (req: Request, res: Response, ne
     return next(error);
   }
 });
+
+// Get products on sale
+export const getProductsOnSale = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { page = 1, limit = 10, sortBy } = req.query;
+  
+  // Build sort conditions
+  let sortConditions: any = { createdAt: -1 };
+  if (sortBy === 'price-low') {
+    sortConditions = { 'vendorProducts.price': 1 };
+  } else if (sortBy === 'price-high') {
+    sortConditions = { 'vendorProducts.price': -1 };
+  } else if (sortBy === 'name') {
+    sortConditions = { 'productDetails.name': 1 };
+  }
+  
+  const pipeline: any[] = [
+    {
+      $match: {
+        status: 'approved',
+        isActive: true,
+        isOnSale: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    {
+      $unwind: '$productDetails'
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'productDetails.category',
+        foreignField: '_id',
+        as: 'categoryDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$categoryDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'productDetails.brand',
+        foreignField: '_id',
+        as: 'brandDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$brandDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorId',
+        foreignField: '_id',
+        as: 'vendorDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$vendorDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        price: 1,
+        stock: 1,
+        sku: 1,
+        isActive: 1,
+        isOnSale: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        productDetails: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          images: 1,
+          createdAt: 1,
+          updatedAt: 1
+        },
+        categoryDetails: {
+          _id: 1,
+          name: 1
+        },
+        brandDetails: {
+          _id: 1,
+          name: 1
+        },
+        vendorDetails: {
+          _id: 1,
+          businessName: 1
+        }
+      }
+    },
+    {
+      $sort: sortConditions
+    }
+  ];
+  
+  // Use aggregate pagination
+  const options = {
+    page: parseInt(page as string),
+    limit: parseInt(limit as string)
+  };
+  
+  const aggregate = VendorProduct.aggregate(pipeline);
+  const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
+  
+  res.status(200).json(result);
+});
+
+// Get best seller products
+export const getBestSellerProducts = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { page = 1, limit = 10, sortBy } = req.query;
+  
+  // Build sort conditions
+  let sortConditions: any = { createdAt: -1 };
+  if (sortBy === 'price-low') {
+    sortConditions = { 'vendorProducts.price': 1 };
+  } else if (sortBy === 'price-high') {
+    sortConditions = { 'vendorProducts.price': -1 };
+  } else if (sortBy === 'name') {
+    sortConditions = { 'productDetails.name': 1 };
+  }
+  
+  const pipeline: any[] = [
+    {
+      $match: {
+        status: 'approved',
+        isActive: true,
+        isBestSeller: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    {
+      $unwind: '$productDetails'
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'productDetails.category',
+        foreignField: '_id',
+        as: 'categoryDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$categoryDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'productDetails.brand',
+        foreignField: '_id',
+        as: 'brandDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$brandDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorId',
+        foreignField: '_id',
+        as: 'vendorDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$vendorDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        price: 1,
+        stock: 1,
+        sku: 1,
+        isActive: 1,
+        isBestSeller: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        productDetails: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          images: 1,
+          createdAt: 1,
+          updatedAt: 1
+        },
+        categoryDetails: {
+          _id: 1,
+          name: 1
+        },
+        brandDetails: {
+          _id: 1,
+          name: 1
+        },
+        vendorDetails: {
+          _id: 1,
+          businessName: 1
+        }
+      }
+    },
+    {
+      $sort: sortConditions
+    }
+  ];
+  
+  // Use aggregate pagination
+  const options = {
+    page: parseInt(page as string),
+    limit: parseInt(limit as string)
+  };
+  
+  const aggregate = VendorProduct.aggregate(pipeline);
+  const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
+  
+  res.status(200).json(result);
+});
+
+// Get new arrival products
+export const getNewArrivalProducts = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { page = 1, limit = 10, sortBy } = req.query;
+  
+  // Build sort conditions
+  let sortConditions: any = { createdAt: -1 };
+  if (sortBy === 'price-low') {
+    sortConditions = { 'vendorProducts.price': 1 };
+  } else if (sortBy === 'price-high') {
+    sortConditions = { 'vendorProducts.price': -1 };
+  } else if (sortBy === 'name') {
+    sortConditions = { 'productDetails.name': 1 };
+  }
+  
+  const pipeline: any[] = [
+    {
+      $match: {
+        status: 'approved',
+        isActive: true,
+        isNewArrival: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    {
+      $unwind: '$productDetails'
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'productDetails.category',
+        foreignField: '_id',
+        as: 'categoryDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$categoryDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'productDetails.brand',
+        foreignField: '_id',
+        as: 'brandDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$brandDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorId',
+        foreignField: '_id',
+        as: 'vendorDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$vendorDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        price: 1,
+        stock: 1,
+        sku: 1,
+        isActive: 1,
+        isNewArrival: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        productDetails: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          images: 1,
+          createdAt: 1,
+          updatedAt: 1
+        },
+        categoryDetails: {
+          _id: 1,
+          name: 1
+        },
+        brandDetails: {
+          _id: 1,
+          name: 1
+        },
+        vendorDetails: {
+          _id: 1,
+          businessName: 1
+        }
+      }
+    },
+    {
+      $sort: sortConditions
+    }
+  ];
+  
+  // Use aggregate pagination
+  const options = {
+    page: parseInt(page as string),
+    limit: parseInt(limit as string)
+  };
+  
+  const aggregate = VendorProduct.aggregate(pipeline);
+  const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
+  
+  res.status(200).json(result);
+});
+
+// Get limited edition products
+export const getLimitedEditionProducts = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { page = 1, limit = 10, sortBy } = req.query;
+  
+  // Build sort conditions
+  let sortConditions: any = { createdAt: -1 };
+  if (sortBy === 'price-low') {
+    sortConditions = { 'vendorProducts.price': 1 };
+  } else if (sortBy === 'price-high') {
+    sortConditions = { 'vendorProducts.price': -1 };
+  } else if (sortBy === 'name') {
+    sortConditions = { 'productDetails.name': 1 };
+  }
+  
+  const pipeline: any[] = [
+    {
+      $match: {
+        status: 'approved',
+        isActive: true,
+        isLimitedEdition: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    {
+      $unwind: '$productDetails'
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'productDetails.category',
+        foreignField: '_id',
+        as: 'categoryDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$categoryDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'productDetails.brand',
+        foreignField: '_id',
+        as: 'brandDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$brandDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorId',
+        foreignField: '_id',
+        as: 'vendorDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$vendorDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        price: 1,
+        stock: 1,
+        sku: 1,
+        isActive: 1,
+        isLimitedEdition: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        productDetails: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          images: 1,
+          createdAt: 1,
+          updatedAt: 1
+        },
+        categoryDetails: {
+          _id: 1,
+          name: 1
+        },
+        brandDetails: {
+          _id: 1,
+          name: 1
+        },
+        vendorDetails: {
+          _id: 1,
+          businessName: 1
+        }
+      }
+    },
+    {
+      $sort: sortConditions
+    }
+  ];
+  
+  // Use aggregate pagination
+  const options = {
+    page: parseInt(page as string),
+    limit: parseInt(limit as string)
+  };
+  
+  const aggregate = VendorProduct.aggregate(pipeline);
+  const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
+  
+  res.status(200).json(result);
+});
