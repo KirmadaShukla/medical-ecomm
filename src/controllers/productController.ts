@@ -99,15 +99,16 @@ export const getAllProductsPost = catchAsyncError(async (req: Request, res: Resp
   
   // Add category filter if provided (handle both single category and array of categories)
   if (category) {
-    let categoryArray: string[] = [];
+    let categoryArray: any[] = [];
     if (Array.isArray(category)) {
-      categoryArray = category as string[];
+      // Convert string IDs to ObjectId instances
+      categoryArray = category.map((cat: string) => new Types.ObjectId(cat));
     } else if (typeof category === 'string') {
       // Check if it's a comma-separated string
       if (category.includes(',')) {
-        categoryArray = category.split(',').map((cat: string) => cat.trim());
+        categoryArray = category.split(',').map((cat: string) => new Types.ObjectId(cat.trim()));
       } else {
-        categoryArray = [category];
+        categoryArray = [new Types.ObjectId(category)];
       }
     }
     
@@ -122,15 +123,16 @@ export const getAllProductsPost = catchAsyncError(async (req: Request, res: Resp
   
   // Add brand filter if provided (handle both single brand and array of brands)
   if (brand) {
-    let brandArray: string[] = [];
+    let brandArray: any[] = [];
     if (Array.isArray(brand)) {
-      brandArray = brand as string[];
+      // Convert string IDs to ObjectId instances
+      brandArray = brand.map((br: string) => new Types.ObjectId(br));
     } else if (typeof brand === 'string') {
       // Check if it's a comma-separated string
       if (brand.includes(',')) {
-        brandArray = brand.split(',').map((br: string) => br.trim());
+        brandArray = brand.split(',').map((br: string) => new Types.ObjectId(br.trim()));
       } else {
-        brandArray = [brand];
+        brandArray = [new Types.ObjectId(brand)];
       }
     }
     
@@ -175,8 +177,6 @@ export const getAllProductsPost = catchAsyncError(async (req: Request, res: Resp
         name: 1,
         description: 1,
         images: 1,
-        category: 1,
-        brand: 1,
         createdAt: 1,
         updatedAt: 1
       },
