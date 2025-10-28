@@ -19,6 +19,7 @@ export interface IOrder extends Document {
   razorpayPaymentId?: string;
   razorpayOrderId?: string;
   razorpaySignature?: string;
+  razorpayRefundId?: string; // Add this field for storing refund ID
   orderStatus: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   shippingAddress: {
     name: string;
@@ -105,6 +106,9 @@ const OrderSchema: Schema = new Schema({
     type: String
   },
   razorpaySignature: {
+    type: String
+  },
+  razorpayRefundId: {
     type: String
   },
   orderStatus: {
