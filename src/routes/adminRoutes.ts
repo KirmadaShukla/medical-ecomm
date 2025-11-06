@@ -10,6 +10,11 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  // Subcategory routes
+  getSubCategoriesByCategoryId,
+  addSubCategory,
+  updateSubCategory,
+  deleteSubCategory,
   // Brand routes
   getBrands,
   getBrandById,
@@ -58,6 +63,12 @@ router.get('/categories/:id', getCategoryById);
 router.post('/categories', isAuthenticated, isAdmin, createCategory);
 router.put('/categories/:id', isAuthenticated, isAdmin, updateCategory);
 router.delete('/categories/:id', isAuthenticated, isAdmin, deleteCategory);
+
+// Subcategory routes
+router.get('/categories/:categoryId/subcategories', getSubCategoriesByCategoryId);
+router.post('/categories/:categoryId/subcategories', isAuthenticated, isAdmin, addSubCategory);
+router.put('/categories/:categoryId/subcategories/:subCategoryId', isAuthenticated, isAdmin, updateSubCategory);
+router.delete('/categories/:categoryId/subcategories/:subCategoryId', isAuthenticated, isAdmin, deleteSubCategory);
 
 // Brand routes
 router.get('/brands', getBrands);

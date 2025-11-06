@@ -9,7 +9,7 @@ import { Types } from 'mongoose';
 // Get all products with filters and aggregation
 export const getAllProductsPost = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const {  minPrice, maxPrice, sortBy, search, page = 1, limit = 10 } = req.query;
-  const {category,brand}=req.body
+  const {category,brand, subCategory}=req.body
   // Build sort conditions
   let sortConditions: any = { createdAt: -1 };
   if (sortBy === 'price-low') {
@@ -121,6 +121,30 @@ export const getAllProductsPost = catchAsyncError(async (req: Request, res: Resp
     }
   }
   
+  // Add subcategory filter if provided (handle both single subcategory and array of subcategories)
+  if (subCategory) {
+    let subCategoryArray: any[] = [];
+    if (Array.isArray(subCategory)) {
+      // Convert string IDs to ObjectId instances
+      subCategoryArray = subCategory.map((subCat: string) => new Types.ObjectId(subCat));
+    } else if (typeof subCategory === 'string') {
+      // Check if it's a comma-separated string
+      if (subCategory.includes(',')) {
+        subCategoryArray = subCategory.split(',').map((subCat: string) => new Types.ObjectId(subCat.trim()));
+      } else {
+        subCategoryArray = [new Types.ObjectId(subCategory)];
+      }
+    }
+    
+    if (subCategoryArray.length > 0) {
+      pipeline.push({
+        $match: {
+          'productDetails.subCategory': { $in: subCategoryArray }
+        }
+      });
+    }
+  }
+  
   // Add brand filter if provided (handle both single brand and array of brands)
   if (brand) {
     let brandArray: any[] = [];
@@ -166,6 +190,9 @@ export const getAllProductsPost = catchAsyncError(async (req: Request, res: Resp
     $project: {
       _id: 1,
       price: 1,
+      discount: 1,
+      shippingPrice: 1,
+      totalPrice: 1,
       stock: 1,
       sku: 1,
       isActive: 1,
@@ -860,8 +887,8 @@ export const getFeaturedProducts = catchAsyncError(async (req: Request, res: Res
 // Get product filters (brands, categories, price range)
 export const getFilters = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Get all active categories
-    const categories = await Category.find({ isActive: true }).select('_id name');
+    // Get all active categories with their subcategories
+    const categories = await Category.find({ isActive: true }).select('_id name subCategories');
     
     // Get all active brands
     const brands = await Brand.find({ isActive: true }).select('_id name');
@@ -1355,6 +1382,134 @@ export const getLimitedEditionProducts = catchAsyncError(async (req: Request, re
         sku: 1,
         isActive: 1,
         isLimitedEdition: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        productDetails: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          images: 1,
+          createdAt: 1,
+          updatedAt: 1
+        },
+        categoryDetails: {
+          _id: 1,
+          name: 1
+        },
+        brandDetails: {
+          _id: 1,
+          name: 1
+        },
+        vendorDetails: {
+          _id: 1,
+          businessName: 1
+        }
+      }
+    },
+    {
+      $sort: sortConditions
+    }
+  ];
+  
+  // Use aggregate pagination
+  const options = {
+    page: parseInt(page as string),
+    limit: parseInt(limit as string)
+  };
+  
+  const aggregate = VendorProduct.aggregate(pipeline);
+  const result = await (VendorProduct.aggregatePaginate as any)(aggregate, options);
+  
+  res.status(200).json(result);
+});
+
+// Get products by subcategory
+export const getProductsBySubCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { subCategoryId } = req.params;
+  const { page = 1, limit = 10, sortBy } = req.query;
+  
+  // Build sort conditions
+  let sortConditions: any = { createdAt: -1 };
+  if (sortBy === 'price-low') {
+    sortConditions = { 'vendorProducts.price': 1 };
+  } else if (sortBy === 'price-high') {
+    sortConditions = { 'vendorProducts.price': -1 };
+  } else if (sortBy === 'name') {
+    sortConditions = { 'productDetails.name': 1 };
+  }
+  
+  const pipeline: any[] = [
+    {
+      $match: {
+        status: 'approved',
+        isActive: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'productId',
+        foreignField: '_id',
+        as: 'productDetails'
+      }
+    },
+    {
+      $unwind: '$productDetails'
+    },
+    {
+      $match: {
+        'productDetails.subCategory': new Types.ObjectId(subCategoryId)
+      }
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'productDetails.category',
+        foreignField: '_id',
+        as: 'categoryDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$categoryDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'productDetails.brand',
+        foreignField: '_id',
+        as: 'brandDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$brandDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: 'vendors',
+        localField: 'vendorId',
+        foreignField: '_id',
+        as: 'vendorDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$vendorDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        price: 1,
+        stock: 1,
+        sku: 1,
+        isActive: 1,
         createdAt: 1,
         updatedAt: 1,
         productDetails: {

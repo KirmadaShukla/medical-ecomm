@@ -12,6 +12,7 @@ export interface IProduct extends Document {
   name: string;
   description?: string;
   category: mongoose.Types.ObjectId; // Reference to Category model
+  subCategory?: mongoose.Types.ObjectId; // Reference to SubCategory within Category
   brand?: mongoose.Types.ObjectId; // Reference to Brand model
   globalProduct?: mongoose.Types.ObjectId; // Reference to GlobalProduct model
   images: IProductImage[];
@@ -25,12 +26,17 @@ export interface IProductPopulated extends Document {
   name: string;
   description?: string;
   category: mongoose.Types.ObjectId;
+  subCategory?: mongoose.Types.ObjectId;
   brand?: mongoose.Types.ObjectId;
   globalProduct?: mongoose.Types.ObjectId;
   images: IProductImage[];
   createdAt: Date;
   updatedAt: Date;
   categoryDetails?: {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+  };
+  subCategoryDetails?: {
     _id: mongoose.Types.ObjectId;
     name: string;
   };
@@ -60,6 +66,9 @@ const ProductSchema: Schema = new Schema({
     type: Schema.Types.ObjectId, 
     ref: 'Category', 
     required: true
+  },
+  subCategory: { 
+    type: Schema.Types.ObjectId
   },
   brand: { 
     type: Schema.Types.ObjectId, 
@@ -91,6 +100,7 @@ ProductSchema.plugin(aggregatePaginate);
 // Index for better query performance
 ProductSchema.index({ name: 'text', description: 'text' });
 ProductSchema.index({ category: 1 });
+ProductSchema.index({ subCategory: 1 });
 
 ProductSchema.index({ globalProduct: 1 });
 

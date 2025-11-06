@@ -10,7 +10,8 @@ import {
   getProductsOnSale,
   getBestSellerProducts,
   getNewArrivalProducts,
-  getLimitedEditionProducts
+  getLimitedEditionProducts,
+  getProductsBySubCategory
 } from '../controllers/productController';
 
 const router = Router();
@@ -25,6 +26,7 @@ router.get('/products/limited-edition', getLimitedEditionProducts);
 router.get('/products/filters', getFilters);
 router.get('/products/search', searchProducts);
 router.get('/products/category/:categoryId', getProductsByCategory);
+router.get('/products/subcategory/:subCategoryId', getProductsBySubCategory);
 router.get('/products/brand/:brandId', getProductsByBrand);
 router.get('/products/:vendorProductId', getProductById);
 

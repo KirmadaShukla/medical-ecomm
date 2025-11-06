@@ -154,7 +154,7 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       category, 
       brand, 
       price, 
-      discount = 0, // Add discount field with default value of 0
+      discount = 0, // Discount percentage (0-100), applied only to product price
       shippingPrice = 0,
       stock, 
       sku, 

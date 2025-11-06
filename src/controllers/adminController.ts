@@ -12,7 +12,7 @@ import VendorPayment from '../models/vendorPayment';
 import Order from '../models/order';
 import { generateAdminToken } from '../utils/tokenUtils';
 import { AppError, catchAsyncError } from '../utils/errorHandler';
-import { uploadBrandImages, uploadProductImages } from '../utils/cloudinary';
+import { uploadBrandImages, uploadProductImages, uploadCategoryImages } from '../utils/cloudinary';
 import { deleteFromCloudinary } from '../utils/cloudinary';
 import mongoose from 'mongoose';
 
@@ -135,15 +135,124 @@ export const getCategoryById = catchAsyncError(async (req: Request, res: Respons
 });
 
 export const createCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const category = new Category(req.body);
+  const { name, description, subCategories, parentId, isActive, sortOrder } = req.body;
+  
+  // Handle category image upload
+  let processedImage: { url: string; publicId: string } | null = null;
+  
+  if (req.files && req.files.image) {
+    const filesArray = Array.isArray(req.files.image) ? req.files.image : [req.files.image];
+    // Generate a temporary ID for folder structure
+    const tempCategoryId = new mongoose.Types.ObjectId().toString();
+    const processedImages = await uploadCategoryImages(filesArray, tempCategoryId);
+    processedImage = processedImages[0] || null;
+  } else if (req.body.image) {
+    // Handle existing image URL
+    const image = req.body.image;
+    if (typeof image === 'string') {
+      processedImage = {
+        url: image,
+        publicId: 'default_public_id'
+      };
+    } else if (typeof image === 'object' && image.url) {
+      processedImage = {
+        url: image.url,
+        publicId: image.publicId || 'default_public_id'
+      };
+    }
+  }
+  
+  const categoryData: any = {
+    name,
+    description,
+    subCategories: subCategories || [],
+    parentId: parentId || null,
+    isActive: isActive !== undefined ? isActive : true,
+    sortOrder: sortOrder || 0
+  };
+  
+  // Add image if it exists
+  if (processedImage) {
+    categoryData.image = processedImage;
+  }
+  
+  const category: any = new Category(categoryData);
   await category.save();
+  
+  // Update the image folder path with the actual category ID
+  if (processedImage && req.files && req.files.image) {
+    try {
+      // Delete the temporary image
+      await deleteFromCloudinary(processedImage.publicId);
+      
+      // Upload again with correct folder path
+      const filesArray = Array.isArray(req.files.image) ? req.files.image : [req.files.image];
+      const processedImages = await uploadCategoryImages(filesArray, (category._id as mongoose.Types.ObjectId).toString());
+      const newImage = processedImages[0] || null;
+      
+      if (newImage) {
+        category.image = newImage;
+        await category.save();
+      }
+    } catch (error) {
+      console.error('Error updating category image folder path:', error);
+    }
+  }
+  
   res.status(201).json(category);
 });
 
 export const updateCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { id } = req.params;
+  const { name, description, subCategories, parentId, isActive, sortOrder } = req.body;
+  
+  const updateFields: any = {};
+  
+  if (name !== undefined) updateFields.name = name;
+  if (description !== undefined) updateFields.description = description;
+  if (subCategories !== undefined) updateFields.subCategories = subCategories;
+  if (parentId !== undefined) updateFields.parentId = parentId || null;
+  if (isActive !== undefined) updateFields.isActive = isActive;
+  if (sortOrder !== undefined) updateFields.sortOrder = sortOrder;
+  
+  // Handle image update
+  if (req.files && req.files.image) {
+    const filesArray = Array.isArray(req.files.image) ? req.files.image : [req.files.image];
+    const processedImages = await uploadCategoryImages(filesArray, id);
+    const processedImage = processedImages[0] || null;
+    
+    if (processedImage) {
+      // Delete old image from Cloudinary
+      const oldCategory = await Category.findById(id);
+      if (oldCategory && oldCategory.image && oldCategory.image.publicId) {
+        try {
+          await deleteFromCloudinary(oldCategory.image.publicId);
+        } catch (error) {
+          console.error('Error deleting old image from Cloudinary:', error);
+        }
+      }
+      
+      updateFields.image = processedImage;
+    }
+  } else if (req.body.image) {
+    // Handle existing image URL
+    const image = req.body.image;
+    if (typeof image === 'string') {
+      updateFields.image = {
+        url: image,
+        publicId: 'default_public_id'
+      };
+    } else if (typeof image === 'object' && image.url) {
+      updateFields.image = {
+        url: image.url,
+        publicId: image.publicId || 'default_public_id'
+      };
+    }
+  }
+  
   const category = await Category.findByIdAndUpdate(
-    req.params.id,
-    req.body,
+    id,
+    updateFields,
     { new: true, runValidators: true }
   );
   
@@ -155,13 +264,117 @@ export const updateCategory = catchAsyncError(async (req: Request, res: Response
 });
 
 export const deleteCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const category = await Category.findByIdAndDelete(req.params.id);
+  const category = await Category.findById(req.params.id);
   
   if (!category) {
     return next(new AppError('Category not found', 404));
   }
   
+  // Delete image from Cloudinary if it exists
+  if (category.image && category.image.publicId) {
+    try {
+      await deleteFromCloudinary(category.image.publicId);
+    } catch (error) {
+      console.error('Error deleting category image from Cloudinary:', error);
+    }
+  }
+  
+  // Check if category has subcategories
+  if (category.subCategories && category.subCategories.length > 0) {
+    return next(new AppError('Cannot delete category with subcategories. Please delete subcategories first.', 400));
+  }
+  
+  // Check if category is used in products
+  const products = await Product.find({ category: category._id });
+  if (products.length > 0) {
+    return next(new AppError('Cannot delete category with products. Please reassign products first.', 400));
+  }
+  
+  await category.deleteOne({});
   res.status(200).json({ message: 'Category deleted successfully' });
+});
+
+// ==================== SUBCATEGORY CRUD ====================
+
+// Get subcategories by category ID
+export const getSubCategoriesByCategoryId = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { categoryId } = req.params;
+  
+  const category = await Category.findById(categoryId, 'subCategories');
+  
+  if (!category) {
+    return next(new AppError('Category not found', 404));
+  }
+  
+  res.status(200).json(category.subCategories);
+});
+
+// Add subcategory to a category
+export const addSubCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { categoryId } = req.params;
+  const { name, description, isActive, sortOrder } = req.body;
+  
+  const subCategoryData: any = {
+    name,
+    description,
+    isActive: isActive !== undefined ? isActive : true,
+    sortOrder: sortOrder || 0
+  };
+  
+  const category = await Category.findByIdAndUpdate(
+    categoryId,
+    { $push: { subCategories: subCategoryData } },
+    { new: true, runValidators: true }
+  );
+  
+  if (!category) {
+    return next(new AppError('Category not found', 404));
+  }
+  
+  res.status(201).json(category);
+});
+
+// Update subcategory within a category
+export const updateSubCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { categoryId, subCategoryId } = req.params;
+  const { name, description, isActive, sortOrder } = req.body;
+  
+  const updateFields: any = {};
+  
+  if (name !== undefined) updateFields['subCategories.$.name'] = name;
+  if (description !== undefined) updateFields['subCategories.$.description'] = description;
+  if (isActive !== undefined) updateFields['subCategories.$.isActive'] = isActive;
+  if (sortOrder !== undefined) updateFields['subCategories.$.sortOrder'] = sortOrder;
+  
+  const category = await Category.findOneAndUpdate(
+    { _id: categoryId, 'subCategories._id': subCategoryId },
+    updateFields,
+    { new: true, runValidators: true }
+  );
+  
+  if (!category) {
+    return next(new AppError('Category or subcategory not found', 404));
+  }
+  
+  res.status(200).json(category);
+});
+
+// Delete subcategory from a category
+export const deleteSubCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { categoryId, subCategoryId } = req.params;
+  
+  // Remove subcategory from category
+  const updatedCategory = await Category.findByIdAndUpdate(
+    categoryId,
+    { $pull: { subCategories: { _id: subCategoryId } } },
+    { new: true, runValidators: true }
+  );
+  
+  if (!updatedCategory) {
+    return next(new AppError('Category not found', 404));
+  }
+  
+  res.status(200).json({ message: 'Subcategory deleted successfully' });
 });
 
 // ==================== BRAND CRUD ====================
@@ -474,9 +687,10 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       name, 
       description, 
       category, 
+      subCategory, // Add subCategory field
       brand, 
       price, 
-      discount = 0, // Add discount field with default value
+      discount = 0, // Discount percentage (0-100), applied only to product price
       shippingPrice = 0,
       stock, 
       sku, 
@@ -488,6 +702,34 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       isNewArrival,
       isLimitedEdition
     } = req.body;
+    
+    // Validate required fields
+    if (!name) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new AppError('Product name is required', 400));
+    }
+    
+    // Validate that if subCategory is provided, it belongs to the selected category
+    if (subCategory) {
+      const categoryDoc = await Category.findById(category);
+      if (!categoryDoc) {
+        await session.abortTransaction();
+        session.endSession();
+        return next(new AppError('Category not found', 400));
+      }
+      
+      // Check if the subCategory exists in the category's subCategories array
+      const subCategoryExists = categoryDoc.subCategories.some(
+        (sub: any) => sub._id.toString() === subCategory
+      );
+      
+      if (!subCategoryExists) {
+        await session.abortTransaction();
+        session.endSession();
+        return next(new AppError('Subcategory does not belong to the selected category', 400));
+      }
+    }
     
     let product;
     let processedImages: { url: string; publicId: string; alt?: string }[] = [];
@@ -553,6 +795,7 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
         name,
         description,
         category,
+        subCategory, // Add subCategory to product data
         brand,
         images: processedImages,
         isActive: true,
@@ -627,7 +870,6 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       // Case 4: Neither global product ID nor product ID exist, but global product name is provided
       // Check if a global product with this name already exists
       let globalProduct = await GlobalProduct.findOne({ name: globalProductName }).session(session);
-      console.log("case 4 runned")
       if (globalProduct) {
         const categoryDoc = await Category.findById(category).session(session);
         if (!categoryDoc) {
@@ -647,6 +889,7 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
           name,
           description,
           category,
+          subCategory, // Add subCategory to product data
           brand,
           images: processedImages,
           isActive: true
@@ -672,15 +915,13 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
         if (!categoryDoc) {
           await session.abortTransaction();
           session.endSession();
-          res.status(400).json({ message: 'Category not found' });
-          return;
+          return next(new AppError('Category not found', 400));
         }
         
         if (!categoryDoc.isActive) {
           await session.abortTransaction();
           session.endSession();
-          res.status(400).json({ message: 'Cannot create product. Category is not active' });
-          return;
+          return next(new AppError('Cannot create product. Category is not active', 400));
         }
         
         // Create new product first
@@ -688,6 +929,7 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
           name,
           description,
           category,
+          subCategory, // Add subCategory to product data
           brand,
           images: processedImages,
           isActive: true
@@ -733,8 +975,7 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
       if (existingVendorProduct) {
         await session.abortTransaction();
         session.endSession();
-        res.status(400).json({ message: 'You have already added this product' });
-        return;
+        return next(new AppError('You have already added this product', 400));
       }
     }
     
@@ -806,9 +1047,31 @@ export const addProduct = catchAsyncError(async (req: Request, res: Response, ne
 });
 
 export const updateProduct = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { subCategory, category, ...updateData } = req.body;
+  
+  // Validate that if subCategory is provided, it belongs to the product's category
+  if (subCategory) {
+    const categoryDoc = await Category.findById(category);
+    if (categoryDoc) {
+      // Check if the subCategory exists in the category's subCategories array
+      const subCategoryExists = categoryDoc.subCategories.some(
+        (sub: any) => sub._id.toString() === subCategory
+      );
+      
+      if (!subCategoryExists) {
+        return next(new AppError('Subcategory does not belong to the selected category', 400));
+      }
+      
+      updateData.subCategory = subCategory;
+    }
+  } else if (subCategory === null) {
+    // Explicitly set to null to remove subCategory
+    updateData.subCategory = null;
+  }
+  
   const product = await Product.findByIdAndUpdate(
     req.params.id,
-    req.body,
+    updateData,
     { new: true, runValidators: true }
   );
   
@@ -960,7 +1223,7 @@ export const updateAdminUploadedProducts = catchAsyncError(async (req: Request, 
     const newDiscount = discount !== undefined ? discount : vendorProduct.discount;
     const newShippingPrice = shippingPrice !== undefined ? shippingPrice : vendorProduct.shippingPrice;
     
-    // Calculate discounted price
+    // Calculate discounted price (discount applied only to product price)
     const discountedPrice = newPrice * (1 - (newDiscount || 0) / 100);
     // Calculate total price (discounted price + shipping)
     vendorProduct.totalPrice = Math.round((discountedPrice + newShippingPrice) * 100) / 100;

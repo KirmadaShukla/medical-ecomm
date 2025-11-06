@@ -603,6 +603,160 @@
 			]
 		},
 		{
+			"name": "Subcategory Management",
+			"item": [
+				{
+					"name": "Get Subcategories by Category ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/categories/:categoryId/subcategories",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"categories",
+								":categoryId",
+								"subcategories"
+							],
+							"variable": [
+								{
+									"key": "categoryId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get all subcategories for a category (public)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Subcategory to Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Surgical Masks\",\n  \"description\": \"Masks for surgical use\",\n  \"isActive\": true,\n  \"sortOrder\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/categories/:categoryId/subcategories",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"categories",
+								":categoryId",
+								"subcategories"
+							],
+							"variable": [
+								{
+									"key": "categoryId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Add a new subcategory to a category (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Subcategory",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Surgical Masks\",\n  \"isActive\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/categories/:categoryId/subcategories/:subCategoryId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"categories",
+								":categoryId",
+								"subcategories",
+								":subCategoryId"
+							],
+							"variable": [
+								{
+									"key": "categoryId",
+									"value": ""
+								},
+								{
+									"key": "subCategoryId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Update a subcategory (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Subcategory",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/admin/categories/:categoryId/subcategories/:subCategoryId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"categories",
+								":categoryId",
+								"subcategories",
+								":subCategoryId"
+							],
+							"variable": [
+								{
+									"key": "categoryId",
+									"value": ""
+								},
+								{
+									"key": "subCategoryId",
+									"value": ""
+								}
+							]
+						},
+						"description": "Delete a subcategory (admin only)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Brand Management",
 			"item": [
 				{
@@ -888,7 +1042,52 @@
 					"response": []
 				},
 				{
-					"name": "Get Featured Products",
+					"name": "Get Products by Subcategory",
+                                        "request": {
+                                                "method": "GET",
+                                                "header": [],
+                                                "url": {
+                                                        "raw": "{{base_url}}/products/subcategory/:subCategoryId",
+                                                        "host": [
+                                                                "{{base_url}}"
+                                                        ],
+                                                        "path": [
+                                                                "products",
+                                                                "subcategory",
+                                                                ":subCategoryId"
+                                                        ],
+                                                        "variable": [
+                                                                {
+                                                                        "key": "subCategoryId",
+                                                                        "value": ""
+                                                                }
+                                                        ]
+                                                },
+                                                "description": "Get products by subcategory ID (public)"
+                                        },
+                                        "response": []
+                                },
+                                {
+                                        "name": "Get Products Filters",
+                                        "request": {
+                                                "method": "GET",
+                                                "header": [],
+                                                "url": {
+                                                        "raw": "{{base_url}}/products/filters",
+                                                        "host": [
+                                                                "{{base_url}}"
+                                                        ],
+                                                        "path": [
+                                                                "products",
+                                                                "filters"
+                                                        ]
+                                                },
+                                                "description": "Get available filters (categories with subcategories, brands, price range) for product search (public)"
+                                        },
+                                        "response": []
+                                },
+                                {
+                                        "name": "Get Featured Products",
 					"request": {
 						"method": "GET",
 						"header": [],

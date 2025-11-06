@@ -129,7 +129,7 @@ const VendorProductSchema: Schema = new Schema({
 
 // Add a pre-save hook to calculate totalPrice based on price, discount, and shippingPrice
 VendorProductSchema.pre<IVendorProduct>('save', function(next) {
-  // Calculate discounted price
+  // Calculate discounted price (discount applied only to product price)
   const discountedPrice = this.price * (1 - (this.discount || 0) / 100);
   // Calculate total price (discounted price + shipping)
   this.totalPrice = Math.round((discountedPrice + this.shippingPrice) * 100) / 100;
