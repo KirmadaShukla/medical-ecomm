@@ -188,6 +188,12 @@ export const createCategory = catchAsyncError(async (req: Request, res: Response
   
   // Process subcategories if provided
   if (subCategories && Array.isArray(subCategories)) {
+    // Validate category ID
+    const categoryId = (category._id as mongoose.Types.ObjectId).toString();
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return next(new AppError('Invalid category ID format', 400));
+    }
+    
     const subCategoryDocs: mongoose.Types.ObjectId[] = [];
     for (const sub of subCategories) {
       let subCategoryData: any = {
@@ -304,6 +310,11 @@ export const updateCategory = catchAsyncError(async (req: Request, res: Response
   
   // Process subcategories if provided
   if (subCategories !== undefined) {
+    // Validate category ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return next(new AppError('Invalid category ID format', 400));
+    }
+    
     // Remove existing subcategories
     await SubCategory.deleteMany({ category: id });
     
@@ -388,6 +399,11 @@ export const deleteCategory = catchAsyncError(async (req: Request, res: Response
 export const getSubCategoriesByCategoryId = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { categoryId } = req.params;
   
+  // Validate ObjectId format
+  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    return next(new AppError('Invalid category ID format', 400));
+  }
+  
   const subCategories = await SubCategory.find({ category: categoryId });
   
   res.status(200).json(subCategories);
@@ -397,6 +413,11 @@ export const getSubCategoriesByCategoryId = catchAsyncError(async (req: Request,
 export const addSubCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { categoryId } = req.params;
   const { name, description, isActive, sortOrder } = req.body;
+  
+  // Validate ObjectId format
+  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    return next(new AppError('Invalid category ID format', 400));
+  }
   
   // Validate required fields
   if (!name) {
@@ -438,6 +459,15 @@ export const updateSubCategory = catchAsyncError(async (req: Request, res: Respo
   const { categoryId, subCategoryId } = req.params;
   const { name, description, isActive, sortOrder } = req.body;
   
+  // Validate ObjectId format
+  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    return next(new AppError('Invalid category ID format', 400));
+  }
+  
+  if (!mongoose.Types.ObjectId.isValid(subCategoryId)) {
+    return next(new AppError('Invalid subcategory ID format', 400));
+  }
+  
   // Check if another subcategory with this name already exists in this category
   if (name !== undefined) {
     const existingSubCategory = await SubCategory.findOne({
@@ -474,6 +504,15 @@ export const updateSubCategory = catchAsyncError(async (req: Request, res: Respo
 // Delete subcategory from a category
 export const deleteSubCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { categoryId, subCategoryId } = req.params;
+  
+  // Validate ObjectId format
+  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+    return next(new AppError('Invalid category ID format', 400));
+  }
+  
+  if (!mongoose.Types.ObjectId.isValid(subCategoryId)) {
+    return next(new AppError('Invalid subcategory ID format', 400));
+  }
   
   // Remove subcategory reference from category
   await Category.findByIdAndUpdate(

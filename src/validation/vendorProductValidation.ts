@@ -1,3 +1,4 @@
+import subCategory from '@/models/subCategory';
 import Joi from 'joi';
 
 // Validation schema for adding a product
@@ -6,6 +7,7 @@ export const addProductSchema = Joi.object({
   name: Joi.string().min(1).max(100).optional(),
   description: Joi.string().max(5000).optional(),
   category: Joi.string().optional(),
+  subCategory: Joi.string().optional(),
   brand: Joi.string().optional(),
   price: Joi.number().min(0).required(),
   discount: Joi.number().min(0).max(100).default(0),
