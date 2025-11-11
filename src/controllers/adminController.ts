@@ -123,12 +123,12 @@ export const sendAdminToken = catchAsyncError(async (req: Request, res: Response
 // ==================== CATEGORY CRUD ====================
 
 export const getCategories = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const categories = await Category.find({}).sort({ sortOrder: 1 });
+  const categories = await Category.find({}).select('-subCategories').sort({ sortOrder: 1 });
   res.status(200).json(categories);
 });
 
 export const getCategoryById = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const category = await Category.findById(req.params.id);
+  const category = await Category.findById(req.params.id).select('-subCategories');
   if (!category) {
     return next(new AppError('Category not found', 404));
   }

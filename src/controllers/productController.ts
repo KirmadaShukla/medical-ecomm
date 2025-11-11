@@ -888,7 +888,21 @@ export const getFeaturedProducts = catchAsyncError(async (req: Request, res: Res
 export const getFilters = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     // Get all active categories with their subcategories
-    const categories = await Category.find({ isActive: true }).select('_id name subCategories');
+    const categories = await Category.find({ isActive: true }).populate('subCategories');
+    
+    // Transform categories to include only necessary fields
+    const filteredCategories = categories.map(category => {
+      const categoryObj = category.toObject();
+      return {
+        _id: categoryObj._id,
+        name: categoryObj.name,
+        subCategories: categoryObj.subCategories.filter((sub: any) => sub !== null).map((sub: any) => ({
+          _id: sub._id,
+          name: sub.name,
+          description: sub.description
+        }))
+      };
+    });
     
     // Get all active brands
     const brands = await Brand.find({ isActive: true }).select('_id name');
@@ -914,7 +928,7 @@ export const getFilters = catchAsyncError(async (req: Request, res: Response, ne
     const maxPrice = priceStats.length > 0 ? priceStats[0].maxPrice : 0;
     
     res.status(200).json({
-      categories,
+      categories: filteredCategories,
       brands,
       priceRange: {
         min: minPrice,
