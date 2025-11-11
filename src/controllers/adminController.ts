@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { inspect } from 'util';
-import Category from '../models/category';
+import Category, { ICategory, ISubCategory } from '../models/category';
 import Brand from '../models/brand';
 import Product, { IProduct } from '../models/product';
 import VendorProduct, { IVendorProduct } from '../models/vendorProduct';
@@ -135,7 +135,7 @@ export const getCategoryById = catchAsyncError(async (req: Request, res: Respons
 });
 
 export const createCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { name, description, subCategories, parentId, isActive, sortOrder } = req.body;
+  const { name, description, subCategories, isActive, sortOrder } = req.body;
   
   // Check if category with this name already exists
   const existingCategory = await Category.findOne({ name });
@@ -168,11 +168,32 @@ export const createCategory = catchAsyncError(async (req: Request, res: Response
     }
   }
   
+  // Process subcategories - ensure they are properly formatted as objects
+  let processedSubCategories: ISubCategory[] = [];
+  if (subCategories && Array.isArray(subCategories)) {
+    processedSubCategories = subCategories.map((sub: any) => {
+      // If subcategory is a string, convert it to an object
+      if (typeof sub === 'string') {
+        return {
+          name: sub,
+          isActive: true,
+          sortOrder: 0
+        };
+      }
+      // If it's already an object, ensure it has required properties
+      return {
+        name: sub.name || '',
+        description: sub.description || '',
+        isActive: sub.isActive !== undefined ? sub.isActive : true,
+        sortOrder: sub.sortOrder || 0
+      };
+    });
+  }
+  
   const categoryData: any = {
     name,
     description,
-    subCategories: subCategories || [],
-    parentId: parentId || null,
+    subCategories: processedSubCategories,
     isActive: isActive !== undefined ? isActive : true,
     sortOrder: sortOrder || 0
   };
@@ -210,16 +231,40 @@ export const createCategory = catchAsyncError(async (req: Request, res: Response
 
 export const updateCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
-  const { name, description, subCategories, parentId, isActive, sortOrder } = req.body;
+  const { name, description, subCategories, isActive, sortOrder } = req.body;
   
   const updateFields: any = {};
   
   if (name !== undefined) updateFields.name = name;
   if (description !== undefined) updateFields.description = description;
-  if (subCategories !== undefined) updateFields.subCategories = subCategories;
-  if (parentId !== undefined) updateFields.parentId = parentId || null;
   if (isActive !== undefined) updateFields.isActive = isActive;
   if (sortOrder !== undefined) updateFields.sortOrder = sortOrder;
+  
+  // Process subcategories if provided
+  if (subCategories !== undefined) {
+    if (Array.isArray(subCategories)) {
+      updateFields.subCategories = subCategories.map((sub: any) => {
+        // If subcategory is a string, convert it to an object
+        if (typeof sub === 'string') {
+          return {
+            name: sub,
+            isActive: true,
+            sortOrder: 0
+          };
+        }
+        // If it's already an object, ensure it has required properties
+        return {
+          name: sub.name || '',
+          description: sub.description || '',
+          isActive: sub.isActive !== undefined ? sub.isActive : true,
+          sortOrder: sub.sortOrder || 0
+        };
+      });
+    } else {
+      // If subCategories is not an array, set it as an empty array
+      updateFields.subCategories = [];
+    }
+  }
   
   // Handle image update
   if (req.files && req.files.image) {
@@ -320,6 +365,11 @@ export const addSubCategory = catchAsyncError(async (req: Request, res: Response
   const { categoryId } = req.params;
   const { name, description, isActive, sortOrder } = req.body;
   
+  // Validate required fields
+  if (!name) {
+    return next(new AppError('Subcategory name is required', 400));
+  }
+  
   // Check if subcategory with this name already exists in this category
   const existingCategory = await Category.findOne({
     _id: categoryId,
@@ -332,7 +382,7 @@ export const addSubCategory = catchAsyncError(async (req: Request, res: Response
   
   const subCategoryData: any = {
     name,
-    description,
+    description: description || '',
     isActive: isActive !== undefined ? isActive : true,
     sortOrder: sortOrder || 0
   };
