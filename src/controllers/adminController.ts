@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { inspect } from 'util';
-import Category, { ICategory, ISubCategory } from '../models/category';
+import Category, { ICategory } from '../models/category';
+import SubCategory, { ISubCategory } from '../models/subCategory';
 import Brand from '../models/brand';
 import Product, { IProduct } from '../models/product';
 import VendorProduct, { IVendorProduct } from '../models/vendorProduct';
@@ -168,32 +169,11 @@ export const createCategory = catchAsyncError(async (req: Request, res: Response
     }
   }
   
-  // Process subcategories - ensure they are properly formatted as objects
-  let processedSubCategories: ISubCategory[] = [];
-  if (subCategories && Array.isArray(subCategories)) {
-    processedSubCategories = subCategories.map((sub: any) => {
-      // If subcategory is a string, convert it to an object
-      if (typeof sub === 'string') {
-        return {
-          name: sub,
-          isActive: true,
-          sortOrder: 0
-        };
-      }
-      // If it's already an object, ensure it has required properties
-      return {
-        name: sub.name || '',
-        description: sub.description || '',
-        isActive: sub.isActive !== undefined ? sub.isActive : true,
-        sortOrder: sub.sortOrder || 0
-      };
-    });
-  }
-  
+  // Create the category first
   const categoryData: any = {
     name,
     description,
-    subCategories: processedSubCategories,
+    subCategories: [],
     isActive: isActive !== undefined ? isActive : true,
     sortOrder: sortOrder || 0
   };
@@ -205,6 +185,40 @@ export const createCategory = catchAsyncError(async (req: Request, res: Response
   
   const category: any = new Category(categoryData);
   await category.save();
+  
+  // Process subcategories if provided
+  if (subCategories && Array.isArray(subCategories)) {
+    const subCategoryDocs: mongoose.Types.ObjectId[] = [];
+    for (const sub of subCategories) {
+      let subCategoryData: any = {
+        category: category._id,
+        isActive: true,
+        sortOrder: 0
+      };
+      
+      // If subcategory is a string, use it as the name
+      if (typeof sub === 'string') {
+        subCategoryData.name = sub;
+      } 
+      // If it's an object, extract the properties
+      else if (typeof sub === 'object') {
+        subCategoryData.name = sub.name || '';
+        subCategoryData.description = sub.description || '';
+        subCategoryData.isActive = sub.isActive !== undefined ? sub.isActive : true;
+        subCategoryData.sortOrder = sub.sortOrder || 0;
+      }
+      
+      // Create the subcategory document
+      const subCategoryDoc = new SubCategory(subCategoryData);
+      const savedSubCategory = await subCategoryDoc.save();
+      // Use the _id directly since it should be an ObjectId
+      subCategoryDocs.push(savedSubCategory._id as mongoose.Types.ObjectId);
+    }
+    
+    // Update the category with the subcategory references
+    category.subCategories = subCategoryDocs;
+    await category.save();
+  }
   
   // Update the image folder path with the actual category ID
   if (processedImage && req.files && req.files.image) {
@@ -226,7 +240,10 @@ export const createCategory = catchAsyncError(async (req: Request, res: Response
     }
   }
   
-  res.status(201).json(category);
+  // Populate subcategories to return them in the response
+  const populatedCategory = await Category.findById(category._id).populate('subCategories');
+  
+  res.status(201).json(populatedCategory);
 });
 
 export const updateCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -239,32 +256,6 @@ export const updateCategory = catchAsyncError(async (req: Request, res: Response
   if (description !== undefined) updateFields.description = description;
   if (isActive !== undefined) updateFields.isActive = isActive;
   if (sortOrder !== undefined) updateFields.sortOrder = sortOrder;
-  
-  // Process subcategories if provided
-  if (subCategories !== undefined) {
-    if (Array.isArray(subCategories)) {
-      updateFields.subCategories = subCategories.map((sub: any) => {
-        // If subcategory is a string, convert it to an object
-        if (typeof sub === 'string') {
-          return {
-            name: sub,
-            isActive: true,
-            sortOrder: 0
-          };
-        }
-        // If it's already an object, ensure it has required properties
-        return {
-          name: sub.name || '',
-          description: sub.description || '',
-          isActive: sub.isActive !== undefined ? sub.isActive : true,
-          sortOrder: sub.sortOrder || 0
-        };
-      });
-    } else {
-      // If subCategories is not an array, set it as an empty array
-      updateFields.subCategories = [];
-    }
-  }
   
   // Handle image update
   if (req.files && req.files.image) {
@@ -311,7 +302,53 @@ export const updateCategory = catchAsyncError(async (req: Request, res: Response
     return next(new AppError('Category not found', 404));
   }
   
-  res.status(200).json(category);
+  // Process subcategories if provided
+  if (subCategories !== undefined) {
+    // Remove existing subcategories
+    await SubCategory.deleteMany({ category: id });
+    
+    if (Array.isArray(subCategories)) {
+      const subCategoryDocs: mongoose.Types.ObjectId[] = [];
+      for (const sub of subCategories) {
+        let subCategoryData: any = {
+          category: id,
+          isActive: true,
+          sortOrder: 0
+        };
+        
+        // If subcategory is a string, use it as the name
+        if (typeof sub === 'string') {
+          subCategoryData.name = sub;
+        } 
+        // If it's an object, extract the properties
+        else if (typeof sub === 'object') {
+          subCategoryData.name = sub.name || '';
+          subCategoryData.description = sub.description || '';
+          subCategoryData.isActive = sub.isActive !== undefined ? sub.isActive : true;
+          subCategoryData.sortOrder = sub.sortOrder || 0;
+        }
+        
+        // Create the subcategory document
+        const subCategoryDoc = new SubCategory(subCategoryData);
+        const savedSubCategory = await subCategoryDoc.save();
+        // Use the _id directly since it should be an ObjectId
+        subCategoryDocs.push(savedSubCategory._id as mongoose.Types.ObjectId);
+      }
+      
+      // Update the category with the subcategory references
+      category.subCategories = subCategoryDocs;
+      await category.save();
+    } else {
+      // If subCategories is not an array, set it as an empty array
+      category.subCategories = [];
+      await category.save();
+    }
+  }
+  
+  // Populate subcategories to return them in the response
+  const populatedCategory = await Category.findById(category._id).populate('subCategories');
+  
+  res.status(200).json(populatedCategory);
 });
 
 export const deleteCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -351,13 +388,9 @@ export const deleteCategory = catchAsyncError(async (req: Request, res: Response
 export const getSubCategoriesByCategoryId = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { categoryId } = req.params;
   
-  const category = await Category.findById(categoryId, 'subCategories');
+  const subCategories = await SubCategory.find({ category: categoryId });
   
-  if (!category) {
-    return next(new AppError('Category not found', 404));
-  }
-  
-  res.status(200).json(category.subCategories);
+  res.status(200).json(subCategories);
 });
 
 // Add subcategory to a category
@@ -371,33 +404,33 @@ export const addSubCategory = catchAsyncError(async (req: Request, res: Response
   }
   
   // Check if subcategory with this name already exists in this category
-  const existingCategory = await Category.findOne({
-    _id: categoryId,
-    'subCategories.name': name
+  const existingSubCategory = await SubCategory.findOne({
+    category: categoryId,
+    name: name
   });
   
-  if (existingCategory) {
+  if (existingSubCategory) {
     return next(new AppError('A subcategory with this name already exists in this category.', 409));
   }
   
   const subCategoryData: any = {
     name,
     description: description || '',
+    category: categoryId,
     isActive: isActive !== undefined ? isActive : true,
     sortOrder: sortOrder || 0
   };
   
-  const category = await Category.findByIdAndUpdate(
+  const subCategory = new SubCategory(subCategoryData);
+  await subCategory.save();
+  
+  // Add subcategory reference to category
+  await Category.findByIdAndUpdate(
     categoryId,
-    { $push: { subCategories: subCategoryData } },
-    { new: true, runValidators: true }
+    { $push: { subCategories: subCategory._id } }
   );
   
-  if (!category) {
-    return next(new AppError('Category not found', 404));
-  }
-  
-  res.status(201).json(category);
+  res.status(201).json(subCategory);
 });
 
 // Update subcategory within a category
@@ -407,50 +440,52 @@ export const updateSubCategory = catchAsyncError(async (req: Request, res: Respo
   
   // Check if another subcategory with this name already exists in this category
   if (name !== undefined) {
-    const existingCategory = await Category.findOne({
-      _id: categoryId,
-      'subCategories.name': name,
-      'subCategories._id': { $ne: subCategoryId }
+    const existingSubCategory = await SubCategory.findOne({
+      category: categoryId,
+      name: name,
+      _id: { $ne: subCategoryId }
     });
     
-    if (existingCategory) {
+    if (existingSubCategory) {
       return next(new AppError('A subcategory with this name already exists in this category.', 409));
     }
   }
   
   const updateFields: any = {};
   
-  if (name !== undefined) updateFields['subCategories.$.name'] = name;
-  if (description !== undefined) updateFields['subCategories.$.description'] = description;
-  if (isActive !== undefined) updateFields['subCategories.$.isActive'] = isActive;
-  if (sortOrder !== undefined) updateFields['subCategories.$.sortOrder'] = sortOrder;
+  if (name !== undefined) updateFields.name = name;
+  if (description !== undefined) updateFields.description = description;
+  if (isActive !== undefined) updateFields.isActive = isActive;
+  if (sortOrder !== undefined) updateFields.sortOrder = sortOrder;
   
-  const category = await Category.findOneAndUpdate(
-    { _id: categoryId, 'subCategories._id': subCategoryId },
+  const subCategory = await SubCategory.findByIdAndUpdate(
+    subCategoryId,
     updateFields,
     { new: true, runValidators: true }
   );
   
-  if (!category) {
-    return next(new AppError('Category or subcategory not found', 404));
+  if (!subCategory) {
+    return next(new AppError('Subcategory not found', 404));
   }
   
-  res.status(200).json(category);
+  res.status(200).json(subCategory);
 });
 
 // Delete subcategory from a category
 export const deleteSubCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { categoryId, subCategoryId } = req.params;
   
-  // Remove subcategory from category
-  const updatedCategory = await Category.findByIdAndUpdate(
+  // Remove subcategory reference from category
+  await Category.findByIdAndUpdate(
     categoryId,
-    { $pull: { subCategories: { _id: subCategoryId } } },
-    { new: true, runValidators: true }
+    { $pull: { subCategories: subCategoryId } }
   );
   
-  if (!updatedCategory) {
-    return next(new AppError('Category not found', 404));
+  // Delete the subcategory
+  const result = await SubCategory.findByIdAndDelete(subCategoryId);
+  
+  if (!result) {
+    return next(new AppError('Subcategory not found', 404));
   }
   
   res.status(200).json({ message: 'Subcategory deleted successfully' });

@@ -2,35 +2,6 @@ import mongoose, { Schema, Document, ObjectId } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import aggregatePaginate from 'mongoose-aggregate-paginate-v2';
 
-// Subcategory schema (embedded within Category)
-export interface ISubCategory {
-  name: string;
-  description?: string;
-  isActive: boolean;
-  sortOrder: number;
-}
-
-const SubCategorySchema = new Schema({
-  name: { 
-    type: String, 
-    required: true,
-    trim: true,
-    maxlength: 100
-  },
-  description: { 
-    type: String,
-    maxlength: 500
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  sortOrder: {
-    type: Number,
-    default: 0
-  }
-});
-
 export interface ICategory extends Document {
   name: string;
   description?: string;
@@ -38,7 +9,7 @@ export interface ICategory extends Document {
     url: string;
     publicId: string;
   };
-  subCategories: ISubCategory[];
+  subCategories: mongoose.Types.ObjectId[]; // Reference to subcategories
   isActive: boolean;
   sortOrder: number;
   createdAt: Date;
@@ -61,10 +32,10 @@ const CategorySchema: Schema = new Schema({
     url: { type: String },
     publicId: { type: String }
   },
-  subCategories: {
-    type: [SubCategorySchema],
-    default: []
-  },
+  subCategories: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SubCategory'
+  }],
   isActive: {
     type: Boolean,
     default: true
