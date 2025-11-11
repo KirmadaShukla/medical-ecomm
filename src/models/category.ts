@@ -51,7 +51,8 @@ const CategorySchema: Schema = new Schema({
     type: String, 
     required: true,
     trim: true,
-    maxlength: 100
+    maxlength: 100,
+    unique: true // Add unique constraint to prevent duplicate category names
   },
   description: { 
     type: String,
@@ -90,5 +91,6 @@ CategorySchema.plugin(aggregatePaginate);
 CategorySchema.index({ name: 'text' });
 CategorySchema.index({ isActive: 1 });
 CategorySchema.index({ parentId: 1 });
+CategorySchema.index({ name: 1 }, { unique: true }); // Explicit unique index on name
 
 export default mongoose.model<ICategory>('Category', CategorySchema);

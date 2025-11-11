@@ -137,6 +137,12 @@ export const getCategoryById = catchAsyncError(async (req: Request, res: Respons
 export const createCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { name, description, subCategories, parentId, isActive, sortOrder } = req.body;
   
+  // Check if category with this name already exists
+  const existingCategory = await Category.findOne({ name });
+  if (existingCategory) {
+    return next(new AppError('A category with this name already exists.', 409));
+  }
+  
   // Handle category image upload
   let processedImage: { url: string; publicId: string } | null = null;
   
@@ -314,6 +320,16 @@ export const addSubCategory = catchAsyncError(async (req: Request, res: Response
   const { categoryId } = req.params;
   const { name, description, isActive, sortOrder } = req.body;
   
+  // Check if subcategory with this name already exists in this category
+  const existingCategory = await Category.findOne({
+    _id: categoryId,
+    'subCategories.name': name
+  });
+  
+  if (existingCategory) {
+    return next(new AppError('A subcategory with this name already exists in this category.', 409));
+  }
+  
   const subCategoryData: any = {
     name,
     description,
@@ -338,6 +354,19 @@ export const addSubCategory = catchAsyncError(async (req: Request, res: Response
 export const updateSubCategory = catchAsyncError(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { categoryId, subCategoryId } = req.params;
   const { name, description, isActive, sortOrder } = req.body;
+  
+  // Check if another subcategory with this name already exists in this category
+  if (name !== undefined) {
+    const existingCategory = await Category.findOne({
+      _id: categoryId,
+      'subCategories.name': name,
+      'subCategories._id': { $ne: subCategoryId }
+    });
+    
+    if (existingCategory) {
+      return next(new AppError('A subcategory with this name already exists in this category.', 409));
+    }
+  }
   
   const updateFields: any = {};
   

@@ -50,22 +50,41 @@ const handleCastErrorDB = (err: any) => {
 };
 
 const handleDuplicateFieldsDB = (err: any) => {
+  // Check if errmsg exists before trying to access it
+  if (!err.errmsg) {
+    const message = 'Duplicate field value. Please use another value!';
+    console.error('Duplicate field error details:', err);
+    return new AppError(message, 400);
+  }
+  
   // Check if this is a vendor product duplicate (productId + vendorId)
-  if (err.errmsg && err.errmsg.includes('productId_1_vendorId_1')) {
+  if (err.errmsg.includes('productId_1_vendorId_1')) {
     const message = 'This product is already added for this vendor.';
     return new AppError(message, 409); // 409 Conflict status code
   } 
   // Check if this is an SKU duplicate
-  else if (err.errmsg && err.errmsg.includes('sku_1')) {
+  else if (err.errmsg.includes('sku_1')) {
     // Extract the duplicate SKU value from the error message
     const skuMatch = err.errmsg.match(/dup key: {[^}]*sku: "([^"]*)"/);
     const duplicateSku = skuMatch ? skuMatch[1] : 'unknown';
     const message = `A product with SKU '${duplicateSku}' already exists.`;
     return new AppError(message, 409); // 409 Conflict status code
   }
+  // Check if this is a category name duplicate
+  else if (err.errmsg.includes('name_1') && err.errmsg.includes('categories')) {
+    const message = 'A category with this name already exists.';
+    return new AppError(message, 409); // 409 Conflict status code
+  }
+  // Check if this is a brand name duplicate
+  else if (err.errmsg.includes('name_1') && err.errmsg.includes('brands')) {
+    const message = 'A brand with this name already exists.';
+    return new AppError(message, 409); // 409 Conflict status code
+  }
   // Generic duplicate field error
   else {
-    const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0];
+    // Safely extract the duplicate value
+    const match = err.errmsg.match(/(["'])(\\?.)*?\1/);
+    const value = match ? match[0] : 'unknown';
     const message = `Duplicate field value: ${value}. Please use another value!`;
     console.error('Duplicate field error details:', err);
     return new AppError(message, 400);
