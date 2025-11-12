@@ -378,8 +378,9 @@ export const deleteCategory = catchAsyncError(async (req: Request, res: Response
     }
   }
   
-  // Check if category has subcategories
-  if (category.subCategories && category.subCategories.length > 0) {
+  // Check if category has subcategories by querying the SubCategory collection
+  const subCategoryCount = await SubCategory.countDocuments({ category: category._id });
+  if (subCategoryCount > 0) {
     return next(new AppError('Cannot delete category with subcategories. Please delete subcategories first.', 400));
   }
   
